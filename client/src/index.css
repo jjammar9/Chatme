@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-dark-purple: #1b0036;
+  --color-off-white: #f8f7f9;
+  --color-light-gray: #f1f1f3;
+  --color-rose: #eddbda;
+  --color-light-green: #d8edbe;
+  --color-deep-purple: #190137;
+  --color-gray: #d2d2d2;
+  --color-green: #058630;
+}
+
+body {
+  font-family: var(--font-sans);
+}
