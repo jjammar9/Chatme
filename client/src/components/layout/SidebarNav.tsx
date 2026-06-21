@@ -1,9 +1,12 @@
 import NavItem from "../ui/NavItem"
 import { sidebarNavItems } from "../../lib/navigation"
 
-const activeKey = "messages"
+interface SidebarNavProps {
+  activeKey: string
+  onNavChange: (key: string) => void
+}
 
-export default function SidebarNav() {
+export default function SidebarNav({ activeKey, onNavChange }: SidebarNavProps) {
   return (
     <nav className="flex-1 px-3 space-y-1">
       {sidebarNavItems.map((item) => (
@@ -13,6 +16,7 @@ export default function SidebarNav() {
           label={item.label}
           active={item.key === activeKey}
           variant="dark"
+          onClick={() => onNavChange(item.key)}
         />
       ))}
     </nav>
