@@ -4,7 +4,7 @@ export default function SidebarProfile() {
       <div className="flex items-center gap-3">
         <div className="w-11 h-11 rounded-lg bg-off-white/10 overflow-hidden shrink-0">
           <img
-            src="https://api.dicebear.com/9.x/adventurer/svg?seed=John&backgroundColor=eddbda"
+            src="https://api.dicebear.com/9.x/avataaars/svg?seed=John&backgroundColor=eddbda"
             alt="avatar"
             className="w-full h-full object-cover"
           />
