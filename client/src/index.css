@@ -15,3 +15,25 @@
 body {
   font-family: var(--font-sans);
 }
+
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d2d2d2;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #1b0036;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d2d2d2 transparent;
+}
