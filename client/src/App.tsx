@@ -9,6 +9,7 @@ import Contacts from "./components/contacts/Contacts"
 import Calendar from "./components/calendar/Calendar"
 import Files from "./components/files/Files"
 import Tasks from "./components/tasks/Tasks"
+import Settings from "./components/settings/Settings"
 
 function MainContent({ activeNav, onChat }: { activeNav: string; onChat: () => void }) {
   switch (activeNav) {
@@ -24,6 +25,8 @@ function MainContent({ activeNav, onChat }: { activeNav: string; onChat: () => v
       return <Files />
     case "tasks":
       return <Tasks />
+    case "settings":
+      return <Settings />
     default:
       return (
         <div className="flex items-center h-full bg-off-white px-8">
