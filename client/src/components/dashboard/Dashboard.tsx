@@ -1,12 +1,5 @@
 import { MessageSquare, Users, FileText, UserPlus, Send, Camera, MapPin, Calendar, ClipboardList } from "lucide-react"
-
-const stats = [
-  { label: "Messages", value: "1,284", icon: MessageSquare, color: "bg-rose", change: "+12%", up: true },
-  { label: "Active Chats", value: "8", icon: Users, color: "bg-light-green", change: "+3", up: true },
-  { label: "Tasks", value: "12", icon: ClipboardList, color: "bg-dark-purple/10", change: "6 unfinished", up: false },
-  { label: "Files Shared", value: "342", icon: FileText, color: "bg-green/20", change: "+28%", up: true },
-  { label: "Groups", value: "5", icon: UserPlus, color: "bg-rose/40", change: "+1", up: true },
-]
+import { dashboardStats } from "../../data/mock"
 
 const activities = [
   { user: "Sarah Johnson", action: "reacted 👍 to your message", time: "2 min ago", seed: "Sarah" },
@@ -26,6 +19,14 @@ const frequent = [
 ]
 
 export default function Dashboard() {
+  const stats = [
+    { label: "Messages", value: "1,284", icon: MessageSquare, color: "bg-rose", change: "+12%", up: true },
+    { label: "Active Chats", value: String(dashboardStats.onlineContacts), icon: Users, color: "bg-light-green", change: "+3", up: true },
+    { label: "Tasks", value: String(dashboardStats.totalTasks), icon: ClipboardList, color: "bg-dark-purple/10", change: `${dashboardStats.unfinishedTasks} unfinished`, up: false },
+    { label: "Contacts", value: String(dashboardStats.totalContacts), icon: FileText, color: "bg-green/20", change: String(dashboardStats.onlineContacts) + " online", up: true },
+    { label: "Groups", value: String(dashboardStats.totalGroups), icon: UserPlus, color: "bg-rose/40", change: "+1", up: true },
+  ]
+
   return (
     <div className="h-full bg-light-gray flex flex-col overflow-y-auto">
       <div className="px-8 py-6 bg-off-white border-b border-gray/30">
@@ -41,7 +42,7 @@ export default function Dashboard() {
                 <span className={`w-9 h-9 rounded-lg ${s.color} flex items-center justify-center`}>
                   <s.icon size={16} className="text-dark-purple" />
                 </span>
-                <span className={`text-[11px] font-semibold ${s.up ? "text-green" : "text-rose"}`}>{s.change}</span>
+                <span className={`text-[11px] font-semibold ${s.up ? "text-green" : "text-dark-purple/50"}`}>{s.change}</span>
               </div>
               <p className="text-2xl font-bold text-dark-purple">{s.value}</p>
               <p className="text-xs text-dark-purple/50 mt-0.5">{s.label}</p>
@@ -122,7 +123,7 @@ export default function Dashboard() {
           <div className="col-span-2 bg-off-white rounded-xl p-5 border border-gray/20">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-bold text-dark-purple">Continue Tasks</h2>
-              <span className="text-[10px] text-dark-purple/50">6 unfinished</span>
+              <span className="text-[10px] text-dark-purple/50">{dashboardStats.unfinishedTasks} unfinished</span>
             </div>
             <div className="space-y-1">
               {[

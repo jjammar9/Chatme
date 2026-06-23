@@ -5,8 +5,8 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
   const [mode, setMode] = useState<"login" | "register">("login")
   const [showPw, setShowPw] = useState(false)
   const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+  const [email, setEmail] = useState("demo@chatme.io")
+  const [password, setPassword] = useState("demo123")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,7 +35,7 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
         <div className="relative space-y-6 max-w-lg">
           <h1 className="text-5xl font-bold text-off-white leading-tight">
             Where conversations<br />
-            <span className="text-rose">come to life.</span>
+            come to life.
           </h1>
           <p className="text-lg text-off-white/50 leading-relaxed">
             Chat, collaborate, and stay connected with your team in a beautifully simple space.

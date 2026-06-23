@@ -63,7 +63,7 @@ function App() {
   if (!isLoggedIn) return <Auth onLogin={handleLogin} />
 
   return (
-    <>
+    <div style={{ animation: "fade-in 0.4s ease-out" }}>
       <AppLayout
         sidebar={<Sidebar activeKey={activeNav} onNavChange={handleNavChange} />}
         mainContent={<MainContent activeNav={activeNav} onChat={() => setActiveNav("messages")} settingsKey={settingsKey} />}
@@ -88,7 +88,7 @@ function App() {
           </div>
         </div>
       )}
-    </>
+    </div>
   )
 }
 

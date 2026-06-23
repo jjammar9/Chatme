@@ -129,7 +129,7 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
         {favorites.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <Star size={16} className="text-rose fill-rose" />
+              <Star size={16} className="text-dark-purple/30 fill-dark-purple/20" />
               <h2 className="text-base font-bold text-dark-purple">Favourites</h2>
               <span className="text-xs text-dark-purple/40">{favorites.length}</span>
             </div>
@@ -191,7 +191,7 @@ function ContactRow({ contact, onToggleFavorite, onChat }: { contact: Contact; o
           <MessageCircle size={18} className="text-dark-purple/60" />
         </button>
         <button onClick={() => onToggleFavorite(contact.name)} className="p-2 rounded-lg hover:bg-light-gray transition-colors" title={contact.favorite ? "Unfavourite" : "Favourite"}>
-          <Star size={18} className={contact.favorite ? "text-rose fill-rose" : "text-dark-purple/30"} />
+          <Star size={18} className={contact.favorite ? "text-dark-purple/50 fill-dark-purple/20" : "text-dark-purple/30"} />
         </button>
       </div>
     </div>

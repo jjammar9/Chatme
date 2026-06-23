@@ -19,7 +19,7 @@ export default function SidebarNav({ activeKey, onNavChange }: SidebarNavProps) 
             active={item.key === activeKey}
             variant="dark"
             onClick={() => onNavChange(item.key)}
-            className={isLogout ? "text-rose/70 hover:text-rose hover:bg-rose/10" : ""}
+            className={isLogout ? "text-off-white/50 hover:text-off-white hover:bg-off-white/10" : ""}
           />
         )
       })}

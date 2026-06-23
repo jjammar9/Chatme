@@ -201,9 +201,9 @@ export default function Settings() {
               </div>
 
               <div className="bg-off-white rounded-2xl border border-gray/10 shadow-sm p-5">
-                <h3 className="text-sm font-bold text-rose mb-3">Danger Zone</h3>
+                <h3 className="text-sm font-bold text-dark-purple/80 mb-3">Danger Zone</h3>
                 <p className="text-xs text-dark-purple/50 mb-4">Once you delete your account, there is no going back.</p>
-                <button className="flex items-center gap-1.5 text-xs font-semibold text-rose border border-rose/30 px-4 py-2 rounded-lg hover:bg-rose/5 transition-colors">
+                <button className="flex items-center gap-1.5 text-xs font-semibold text-dark-purple/80 border border-dark-purple/20 px-4 py-2 rounded-lg hover:bg-dark-purple/5 transition-colors">
                   <Trash2 size={14} /> Delete Account
                 </button>
               </div>
