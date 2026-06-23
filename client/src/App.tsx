@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { LogOut, X } from "lucide-react"
 import AppLayout from "./components/layout/AppLayout"
 import Sidebar from "./components/layout/Sidebar"
 import ChatList from "./components/chat/ChatList"
@@ -39,20 +40,41 @@ function MainContent({ activeNav, onChat, settingsKey }: { activeNav: string; on
 function App() {
   const [activeNav, setActiveNav] = useState("messages")
   const [settingsKey, setSettingsKey] = useState(0)
+  const [showLogout, setShowLogout] = useState(false)
 
   const handleNavChange = (key: string) => {
+    if (key === "logout") { setShowLogout(true); return }
     if (key === "settings") setSettingsKey((k) => k + 1)
     setActiveNav(key)
   }
 
   return (
-    <AppLayout
-      sidebar={<Sidebar activeKey={activeNav} onNavChange={handleNavChange} />}
-      mainContent={<MainContent activeNav={activeNav} onChat={() => setActiveNav("messages")} settingsKey={settingsKey} />}
-      chatList={<ChatList />}
-      messagePanel={<MessagePanel />}
-      showMessages={activeNav === "messages"}
-    />
+    <>
+      <AppLayout
+        sidebar={<Sidebar activeKey={activeNav} onNavChange={handleNavChange} />}
+        mainContent={<MainContent activeNav={activeNav} onChat={() => setActiveNav("messages")} settingsKey={settingsKey} />}
+        chatList={<ChatList />}
+        messagePanel={<MessagePanel />}
+        showMessages={activeNav === "messages"}
+      />
+      {showLogout && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowLogout(false)}>
+          <div className="bg-off-white rounded-2xl p-6 w-80 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-dark-purple">Logout</h3>
+              <button onClick={() => setShowLogout(false)}><X size={18} className="text-dark-purple/50" /></button>
+            </div>
+            <p className="text-sm text-dark-purple/60 mb-6">Are you sure you want to logout?</p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowLogout(false)} className="flex-1 text-sm font-semibold text-dark-purple bg-light-gray py-2.5 rounded-xl hover:bg-gray/20 transition-colors">Cancel</button>
+              <button onClick={() => setShowLogout(false)} className="flex-1 text-sm font-semibold text-off-white bg-rose py-2.5 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5">
+                <LogOut size={14} /> Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 

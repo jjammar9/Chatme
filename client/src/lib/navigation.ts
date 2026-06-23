@@ -15,4 +15,5 @@ export const sidebarNavItems: NavItemConfig[] = [
   { key: "files", label: "Files", icon: navIcons.files },
   { key: "tasks", label: "Tasks", icon: navIcons.tasks },
   { key: "settings", label: "Settings", icon: navIcons.settings },
+  { key: "logout", label: "Logout", icon: navIcons.logout },
 ]

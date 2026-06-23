@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { User, Shield, Bell, Palette, EyeOff, MessageCircle, Database, Info, Sun, Moon, Smartphone, Monitor, Camera, Check, X, Circle, Trash2, ChevronRight, Globe, Lock, Eye, Wifi, Download, LogOut } from "lucide-react"
+import { User, Shield, Bell, Palette, EyeOff, MessageCircle, Database, Info, Sun, Moon, Smartphone, Monitor, Camera, Check, X, Circle, Trash2, ChevronRight, Globe, Lock, Eye, Wifi, Download } from "lucide-react"
 
 type SettingsCategory = "profile" | "account" | "notifications" | "appearance" | "privacy" | "chat" | "storage" | "about"
 
@@ -63,7 +63,6 @@ export default function Settings() {
   const [mediaRoaming, setMediaRoaming] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [editingStatus, setEditingStatus] = useState(false)
-  const [showLogout, setShowLogout] = useState(false)
   const [tempName, setTempName] = useState(name)
   const [tempStatus, setTempStatus] = useState(status)
 
@@ -109,10 +108,6 @@ export default function Settings() {
                 </button>
               )
             })}
-            <div className="w-px h-5 bg-gray/20 mx-2" />
-            <button onClick={() => setShowLogout(true)} className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full whitespace-nowrap transition-colors text-rose bg-rose/10 hover:bg-rose/20">
-              <LogOut size={13} /> Logout
-            </button>
           </div>
           <div className="px-8 py-6">
           {activeCat === "profile" && (
@@ -478,23 +473,6 @@ export default function Settings() {
         </div>
       </div>
 
-      {showLogout && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowLogout(false)}>
-          <div className="bg-off-white rounded-2xl p-6 w-80 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-dark-purple">Logout</h3>
-              <button onClick={() => setShowLogout(false)}><X size={18} className="text-dark-purple/50" /></button>
-            </div>
-            <p className="text-sm text-dark-purple/60 mb-6">Are you sure you want to logout?</p>
-            <div className="flex gap-3">
-              <button onClick={() => setShowLogout(false)} className="flex-1 text-sm font-semibold text-dark-purple bg-light-gray py-2.5 rounded-xl hover:bg-gray/20 transition-colors">Cancel</button>
-              <button onClick={() => setShowLogout(false)} className="flex-1 text-sm font-semibold text-off-white bg-rose py-2.5 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5">
-                <LogOut size={14} /> Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
