@@ -10,7 +10,6 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email || !password || (mode === "register" && !name)) return
     onLogin()
   }
 
