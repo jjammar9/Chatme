@@ -12,7 +12,7 @@ export default function Sidebar({ activeKey, onNavChange }: SidebarProps) {
     <div className="flex flex-col h-full bg-dark-purple text-off-white">
       <SidebarLogo />
       <SidebarNav activeKey={activeKey} onNavChange={onNavChange} />
-      <SidebarProfile />
+      <SidebarProfile onNavChange={onNavChange} />
     </div>
   )
 }

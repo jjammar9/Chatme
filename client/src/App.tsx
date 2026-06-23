@@ -11,7 +11,7 @@ import Files from "./components/files/Files"
 import Tasks from "./components/tasks/Tasks"
 import Settings from "./components/settings/Settings"
 
-function MainContent({ activeNav, onChat }: { activeNav: string; onChat: () => void }) {
+function MainContent({ activeNav, onChat, settingsKey }: { activeNav: string; onChat: () => void; settingsKey: number }) {
   switch (activeNav) {
     case "dashboard":
       return <Dashboard />
@@ -26,7 +26,7 @@ function MainContent({ activeNav, onChat }: { activeNav: string; onChat: () => v
     case "tasks":
       return <Tasks />
     case "settings":
-      return <Settings />
+      return <Settings key={settingsKey} />
     default:
       return (
         <div className="flex items-center h-full bg-off-white px-8">
@@ -38,13 +38,19 @@ function MainContent({ activeNav, onChat }: { activeNav: string; onChat: () => v
 
 function App() {
   const [activeNav, setActiveNav] = useState("messages")
+  const [settingsKey, setSettingsKey] = useState(0)
+
+  const handleNavChange = (key: string) => {
+    if (key === "settings") setSettingsKey((k) => k + 1)
+    setActiveNav(key)
+  }
 
   return (
     <AppLayout
-      sidebar={<Sidebar activeKey={activeNav} onNavChange={setActiveNav} />}
+      sidebar={<Sidebar activeKey={activeNav} onNavChange={handleNavChange} />}
+      mainContent={<MainContent activeNav={activeNav} onChat={() => setActiveNav("messages")} settingsKey={settingsKey} />}
       chatList={<ChatList />}
       messagePanel={<MessagePanel />}
-      mainContent={<MainContent activeNav={activeNav} onChat={() => setActiveNav("messages")} />}
       showMessages={activeNav === "messages"}
     />
   )

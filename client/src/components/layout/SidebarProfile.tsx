@@ -1,6 +1,6 @@
-export default function SidebarProfile() {
+export default function SidebarProfile({ onNavChange }: { onNavChange: (key: string) => void }) {
   return (
-    <div className="pl-7 pr-4 py-4">
+    <button onClick={() => onNavChange("settings")} className="w-full pl-7 pr-4 py-4 hover:bg-off-white/5 transition-colors text-left">
       <div className="flex items-center gap-3">
         <div className="w-11 h-11 rounded-lg bg-off-white/10 overflow-hidden shrink-0">
           <img
@@ -14,6 +14,6 @@ export default function SidebarProfile() {
           <p className="text-sm font-semibold text-off-white/50 truncate">@johndoe</p>
         </div>
       </div>
-    </div>
+    </button>
   )
 }
