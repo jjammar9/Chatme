@@ -97,19 +97,19 @@ export default function Settings() {
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        <div className="w-52 shrink-0 border-r border-gray/20 bg-off-white p-4 space-y-0.5 overflow-y-auto">
-          {categories.map((cat) => {
-            const CatIcon = cat.icon
-            return (
-              <button key={cat.key} onClick={() => setActiveCat(cat.key)} className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${activeCat === cat.key ? "bg-dark-purple text-off-white shadow-sm" : "text-dark-purple/60 hover:text-dark-purple hover:bg-light-gray"}`}>
-                <CatIcon size={16} />
-                <span>{cat.label}</span>
-              </button>
-            )
-          })}
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-8 py-6">
+        <div className="flex-1 overflow-y-auto">
+          <div className="bg-off-white border-b border-gray/20 px-7 py-3 flex items-center gap-1.5 overflow-x-auto">
+            {categories.map((cat) => {
+              const CatIcon = cat.icon
+              return (
+                <button key={cat.key} onClick={() => setActiveCat(cat.key)} className={`flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full whitespace-nowrap transition-colors ${activeCat === cat.key ? "bg-dark-purple text-off-white" : "bg-light-gray text-dark-purple/60 hover:text-dark-purple hover:bg-gray/20"}`}>
+                  <CatIcon size={13} />
+                  {cat.label}
+                </button>
+              )
+            })}
+          </div>
+          <div className="px-8 py-6">
           {activeCat === "profile" && (
             <div className="max-w-2xl space-y-6">
               <div className="flex items-center gap-5">
@@ -469,6 +469,7 @@ export default function Settings() {
               </div>
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>
