@@ -10,7 +10,7 @@ interface SidebarProps {
 export default function Sidebar({ activeKey, onNavChange }: SidebarProps) {
   return (
     <div className="flex flex-col h-full bg-dark-purple text-off-white">
-      <SidebarLogo />
+      <SidebarLogo onClick={() => onNavChange("dashboard")} />
       <SidebarNav activeKey={activeKey} onNavChange={onNavChange} />
       <SidebarProfile onNavChange={onNavChange} />
     </div>
