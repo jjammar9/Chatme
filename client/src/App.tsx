@@ -11,6 +11,7 @@ import Calendar from "./components/calendar/Calendar"
 import Files from "./components/files/Files"
 import Tasks from "./components/tasks/Tasks"
 import Settings from "./components/settings/Settings"
+import Auth from "./components/auth/Auth"
 
 function MainContent({ activeNav, onChat, settingsKey }: { activeNav: string; onChat: () => void; settingsKey: number }) {
   switch (activeNav) {
@@ -38,15 +39,28 @@ function MainContent({ activeNav, onChat, settingsKey }: { activeNav: string; on
 }
 
 function App() {
-  const [activeNav, setActiveNav] = useState("messages")
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [activeNav, setActiveNav] = useState("dashboard")
   const [settingsKey, setSettingsKey] = useState(0)
   const [showLogout, setShowLogout] = useState(false)
+
+  const handleLogin = () => {
+    setIsLoggedIn(true)
+    setActiveNav("dashboard")
+  }
+
+  const handleLogout = () => {
+    setIsLoggedIn(false)
+    setActiveNav("dashboard")
+  }
 
   const handleNavChange = (key: string) => {
     if (key === "logout") { setShowLogout(true); return }
     if (key === "settings") setSettingsKey((k) => k + 1)
     setActiveNav(key)
   }
+
+  if (!isLoggedIn) return <Auth onLogin={handleLogin} />
 
   return (
     <>
@@ -67,7 +81,7 @@ function App() {
             <p className="text-sm text-dark-purple/60 mb-6">Are you sure you want to logout?</p>
             <div className="flex gap-3">
               <button onClick={() => setShowLogout(false)} className="flex-1 text-sm font-semibold text-dark-purple bg-light-gray py-2.5 rounded-xl hover:bg-gray/20 transition-colors">Cancel</button>
-              <button onClick={() => setShowLogout(false)} className="flex-1 text-sm font-semibold text-off-white bg-rose py-2.5 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5">
+              <button onClick={handleLogout} className="flex-1 text-sm font-semibold text-off-white bg-rose py-2.5 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5">
                 <LogOut size={14} /> Logout
               </button>
             </div>
