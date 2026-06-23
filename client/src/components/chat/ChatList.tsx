@@ -139,13 +139,32 @@ export default function ChatList() {
           <div>
             <span className="text-xs font-bold text-dark-purple/60 block mb-1">Jordan Kim</span>
             <div className="max-w-[70%] bg-white rounded-2xl rounded-bl-sm overflow-hidden">
-              <img
-                src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=300&fit=crop"
-                alt="Design mockup"
-                className="w-full h-44 object-cover"
-              />
+              <div className="grid grid-cols-2 gap-0.5">
+                <img
+                  src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=300&fit=crop"
+                  alt=""
+                  className="w-full h-36 object-cover"
+                />
+                <div className="grid grid-rows-2 gap-0.5">
+                  <img
+                    src="https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=400&h=300&fit=crop"
+                    alt=""
+                    className="w-full h-[71px] object-cover"
+                  />
+                  <div className="relative">
+                    <img
+                      src="https://images.unsplash.com/photo-1549490349-8643362247b5?w=400&h=300&fit=crop"
+                      alt=""
+                      className="w-full h-[71px] object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">+26</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div className="px-4 pb-2.5 pt-2">
-                <p className="text-sm text-dark-purple">Here's the new design mockup I was working on! Thoughts?</p>
+                <p className="text-sm text-dark-purple">Here are some design mockup options! Thoughts? 🤔</p>
                 <span className="text-[10px] text-dark-purple/40 text-right block mt-1">10:45</span>
               </div>
             </div>

@@ -3,13 +3,19 @@ import AppLayout from "./components/layout/AppLayout"
 import Sidebar from "./components/layout/Sidebar"
 import ChatList from "./components/chat/ChatList"
 import MessagePanel from "./components/chat/MessagePanel"
+import Dashboard from "./components/dashboard/Dashboard"
 
 function MainContent({ activeNav }: { activeNav: string }) {
-  return (
-    <div className="flex items-center h-full bg-off-white px-8">
-      <h2 className="text-2xl font-bold text-deep-purple capitalize">{activeNav}</h2>
-    </div>
-  )
+  switch (activeNav) {
+    case "dashboard":
+      return <Dashboard />
+    default:
+      return (
+        <div className="flex items-center h-full bg-off-white px-8">
+          <h2 className="text-2xl font-bold text-deep-purple capitalize">{activeNav}</h2>
+        </div>
+      )
+  }
 }
 
 function App() {
