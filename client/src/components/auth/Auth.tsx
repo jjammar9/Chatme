@@ -123,7 +123,7 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
               </button>
             </div>
 
-            <button type="submit" className="w-full bg-rose text-off-white text-sm font-bold py-3 rounded-xl hover:opacity-90 transition-opacity shadow-lg shadow-rose/20">
+            <button type="submit" className="w-full bg-off-white text-dark-purple text-sm font-bold py-3 rounded-xl hover:opacity-90 transition-opacity shadow-lg">
               {mode === "login" ? "Sign In" : "Create Account"}
             </button>
           </form>
