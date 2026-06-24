@@ -1,0 +1,12 @@
+export interface CalendarEvent {
+  date: number
+  month: number
+  year: number
+  title: string
+  time: string
+  seed: string
+  status: "confirmed" | "tentative" | "cancelled"
+  location?: string
+  description?: string
+  attendees?: string[]
+}

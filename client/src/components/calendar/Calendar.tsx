@@ -1,18 +1,6 @@
 import { useState } from "react"
 import { ChevronLeft, ChevronRight, Plus, CalendarDays, X, MapPin, Clock, Users, ArrowLeft, Trash2, Edit3, Star, Gift, Heart } from "lucide-react"
-
-interface CalendarEvent {
-  date: number
-  month: number
-  year: number
-  title: string
-  time: string
-  seed: string
-  status: "confirmed" | "tentative" | "cancelled"
-  location?: string
-  description?: string
-  attendees?: string[]
-}
+import type { CalendarEvent } from "../../types"
 
 const seeds = ["Sarah", "Jordan", "Maya", "Taylor", "Alex", "Emily", "Marcus", "Priya"]
 

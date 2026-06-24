@@ -9,15 +9,9 @@ const day14 = new Date(today); day14.setDate(day14.getDate() + 14)
 const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1)
 const lastWeek = new Date(today); lastWeek.setDate(lastWeek.getDate() - 7)
 
-export interface MockTask {
-  id: string; title: string; description: string; dueDate: Date
-  priority: "urgent" | "high" | "medium" | "low"
-  status: "todo" | "done"; assignee: string; seed: string; category: string
-  subtasks: { title: string; done: boolean }[]
-  comments: { author: string; text: string; timestamp: Date }[]
-}
+import type { Task } from "../types"
 
-export const mockTasks: MockTask[] = [
+export const mockTasks: Task[] = [
   { id: "1", title: "Finalize Q3 roadmap presentation", description: "", dueDate: today, priority: "urgent", status: "todo", assignee: "Sarah Johnson", seed: "Sarah", category: "Work", subtasks: [{ title: "Collect team goals", done: true }, { title: "Design slides", done: false }, { title: "Review with stakeholders", done: false }], comments: [] },
   { id: "2", title: "Review design system components", description: "", dueDate: today, priority: "high", status: "todo", assignee: "Maya Patel", seed: "Maya", category: "Design", subtasks: [{ title: "Check button variants", done: true }, { title: "Review form inputs", done: false }], comments: [] },
   { id: "3", title: "Push API documentation update", description: "", dueDate: tomorrow, priority: "medium", status: "todo", assignee: "Alex Chen", seed: "Alex", category: "Engineering", subtasks: [], comments: [] },

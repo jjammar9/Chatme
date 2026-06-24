@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Star, MessageCircle, Mail, Search, Plus, X, Users } from "lucide-react"
+import type { Contact } from "../../types"
 
 const communities = [
   { name: "Project Squad", seeds: ["Sarah", "Alex", "Maya"] },
@@ -22,16 +23,6 @@ for (const c of communities) {
     if (!seedCommunities[s]) seedCommunities[s] = []
     seedCommunities[s].push(c.name)
   }
-}
-
-interface Contact {
-  name: string
-  seed: string
-  email: string
-  role: string
-  online: boolean
-  favorite: boolean
-  phone?: string
 }
 
 const allContacts: Contact[] = [

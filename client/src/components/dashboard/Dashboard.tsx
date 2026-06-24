@@ -1,5 +1,7 @@
+import { useEffect } from "react"
 import { MessageSquare, Users, FileText, UserPlus, Send, Camera, MapPin, Calendar, ClipboardList } from "lucide-react"
 import { dashboardStats } from "../../data/mock"
+import { useToast } from "../../context/ToastContext"
 
 const activities = [
   { user: "Sarah Johnson", action: "reacted 👍 to your message", time: "2 min ago", seed: "Sarah" },
@@ -19,6 +21,12 @@ const frequent = [
 ]
 
 export default function Dashboard() {
+  const { toast } = useToast()
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"
+
+  useEffect(() => { toast("Welcome to Chatme", "success") }, [])
+
   const stats = [
     { label: "Messages", value: "1,284", icon: MessageSquare, color: "bg-rose", change: "+12%", up: true },
     { label: "Active Chats", value: String(dashboardStats.onlineContacts), icon: Users, color: "bg-light-green", change: "+3", up: true },
@@ -31,7 +39,7 @@ export default function Dashboard() {
     <div className="h-full bg-light-gray flex flex-col overflow-y-auto">
       <div className="px-8 py-6 bg-off-white border-b border-gray/30">
         <p className="text-xs font-semibold text-dark-purple/50 uppercase tracking-wider">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
-        <h1 className="text-2xl font-bold text-dark-purple mt-1">Good morning, Alex 👋</h1>
+        <h1 className="text-2xl font-bold text-dark-purple mt-1">{greeting}, Alex 👋</h1>
         <p className="text-sm text-dark-purple/60 mt-1">Here's what's happening with your chats today.</p>
       </div>
       <div className="flex-1 px-8 py-6 space-y-6">

@@ -1,30 +1,6 @@
 import { useState } from "react"
 import { CheckCheck, Plus, X, Circle, CheckCircle, Clock, AlertCircle, Flag, User, CalendarDays, MessageSquare, Paperclip, Trash2, Edit3, ArrowLeft, ChevronDown, ListTodo } from "lucide-react"
-
-interface Subtask {
-  title: string
-  done: boolean
-}
-
-interface Comment {
-  author: string
-  text: string
-  timestamp: Date
-}
-
-interface Task {
-  id: string
-  title: string
-  description: string
-  dueDate: Date
-  priority: "urgent" | "high" | "medium" | "low"
-  status: "todo" | "done"
-  assignee: string
-  seed: string
-  category: string
-  subtasks: Subtask[]
-  comments: Comment[]
-}
+import type { Task } from "../../types"
 
 const now = new Date()
 const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())

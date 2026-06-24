@@ -1,13 +1,7 @@
 import { useState } from "react"
 import { User, Shield, Bell, Palette, EyeOff, MessageCircle, Database, Info, Sun, Moon, Smartphone, Monitor, Camera, Check, X, Circle, Trash2, ChevronRight, Globe, Lock, Eye, Wifi, Download } from "lucide-react"
-
-type SettingsCategory = "profile" | "account" | "notifications" | "appearance" | "privacy" | "chat" | "storage" | "about"
-
-interface CategoryConfig {
-  key: SettingsCategory
-  label: string
-  icon: React.ComponentType<{ size?: number; className?: string }>
-}
+import type { SettingsCategory, CategoryConfig } from "../../types"
+import { useTheme } from "../../context/ThemeContext"
 
 const categories: CategoryConfig[] = [
   { key: "profile", label: "Profile", icon: User },
@@ -51,9 +45,7 @@ export default function Settings() {
   const [notifTasks, setNotifTasks] = useState(true)
   const [notifFiles, setNotifFiles] = useState(false)
   const [notifSound, setNotifSound] = useState(true)
-  const [theme, setTheme] = useState<"light" | "dark" | "system">("light")
-  const [accentColor, setAccentColor] = useState("#1b0036")
-  const [fontSize, setFontSize] = useState(16)
+  const { theme, accentColor, fontSize, setTheme, setAccentColor, setFontSize } = useTheme()
   const [onlineStatus, setOnlineStatus] = useState<"everyone" | "contacts" | "nobody">("everyone")
   const [readReceipts, setReadReceipts] = useState(true)
   const [lastSeen, setLastSeen] = useState(true)

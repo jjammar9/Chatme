@@ -1,17 +1,6 @@
 import { useState } from "react"
 import { Search, Plus, X, FileText, Image, Video, Music, Link as LinkIcon, File, Download, Forward, Clock, User, CalendarDays, ChevronDown, FolderOpen, Tag } from "lucide-react"
-
-interface FileItem {
-  id: string
-  name: string
-  type: "document" | "image" | "video" | "audio" | "link"
-  size: string
-  timestamp: Date
-  sender: string
-  seed: string
-  preview?: string
-  description?: string
-}
+import type { FileItem } from "../../types"
 
 const seeds = ["Sarah", "Jordan", "Maya", "Taylor", "Alex", "Emily", "Marcus", "Priya"]
 

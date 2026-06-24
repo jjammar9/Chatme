@@ -1,10 +1,5 @@
 import { navIcons } from "../lib/icons"
-
-export interface NavItemConfig {
-  key: string
-  label: string
-  icon: React.ReactNode
-}
+import type { NavItemConfig } from "../types"
 
 export const sidebarNavItems: NavItemConfig[] = [
   { key: "dashboard", label: "Dashboard", icon: navIcons.dashboard },

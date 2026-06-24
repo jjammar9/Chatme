@@ -42,3 +42,13 @@ body {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+:root {
+  --accent: #1b0036;
+  --font-size-base: 16px;
+}
+
+.dark body {
+  background: #111;
+  color-scheme: dark;
+}
