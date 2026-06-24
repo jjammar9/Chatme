@@ -1,5 +1,7 @@
 import { useState } from "react"
-import { Mail, Lock, User, Eye, EyeOff } from "lucide-react"
+import { Mail, Lock, User, Eye, EyeOff, AlertCircle } from "lucide-react"
+
+const API = "/api/auth"
 
 export default function Auth({ onLogin }: { onLogin: () => void }) {
   const [mode, setMode] = useState<"login" | "register">("login")
@@ -7,10 +9,35 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("demo@chatme.io")
   const [password, setPassword] = useState("demo123")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    onLogin()
+    setError("")
+    setLoading(true)
+    try {
+      const body = mode === "register"
+        ? { name, email, password }
+        : { email, password }
+      const res = await fetch(`${API}/${mode}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Something went wrong")
+        return
+      }
+      localStorage.setItem("token", data.token)
+      localStorage.setItem("user", JSON.stringify(data.user))
+      onLogin()
+    } catch {
+      setError("Network error — is the server running?")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -78,13 +105,13 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
 
           <div className="flex gap-2 mb-8 bg-off-white/5 rounded-xl p-1">
             <button
-              onClick={() => setMode("login")}
+              onClick={() => { setMode("login"); setError("") }}
               className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-all ${mode === "login" ? "bg-off-white text-dark-purple shadow-sm" : "text-off-white/50 hover:text-off-white"}`}
             >
               Sign In
             </button>
             <button
-              onClick={() => setMode("register")}
+              onClick={() => { setMode("register"); setEmail(""); setPassword(""); setError("") }}
               className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-all ${mode === "register" ? "bg-off-white text-dark-purple shadow-sm" : "text-off-white/50 hover:text-off-white"}`}
             >
               Register
@@ -122,8 +149,13 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
               </button>
             </div>
 
-            <button type="submit" className="w-full bg-off-white text-dark-purple text-sm font-bold py-3 rounded-xl hover:opacity-90 transition-opacity shadow-lg">
-              {mode === "login" ? "Sign In" : "Create Account"}
+            {error && (
+              <div className="flex items-center gap-2 text-xs text-rose bg-rose/10 px-3 py-2 rounded-lg">
+                <AlertCircle size="14" /> {error}
+              </div>
+            )}
+            <button type="submit" disabled={loading} className="w-full bg-off-white text-dark-purple text-sm font-bold py-3 rounded-xl hover:opacity-90 transition-opacity shadow-lg disabled:opacity-50">
+              {loading ? "Please wait..." : mode === "login" ? "Sign In" : "Create Account"}
             </button>
           </form>
 

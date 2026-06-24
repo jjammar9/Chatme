@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { LogOut, X } from "lucide-react"
 import { ThemeProvider } from "./context/ThemeContext"
 import { ToastProvider } from "./context/ToastContext"
@@ -79,9 +79,20 @@ function App() {
   }
 
   const handleLogout = () => {
+    localStorage.removeItem("token")
+    localStorage.removeItem("user")
     setIsLoggedIn(false)
     setActiveNav("dashboard")
   }
+
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+    if (token) {
+      fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
+        .then((res) => { if (res.ok) setIsLoggedIn(true) })
+        .catch(() => {})
+    }
+  }, [])
 
   const handleNavChange = (key: string) => {
     if (key === "logout") { setShowLogout(true); return }
