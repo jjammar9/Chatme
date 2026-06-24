@@ -1,6 +1,11 @@
 import { useState } from "react"
-import { CheckCheck, Plus, X, Circle, CheckCircle, Clock, AlertCircle, Flag, User, CalendarDays, MessageSquare, Paperclip, Trash2, Edit3, ArrowLeft, ChevronDown, ListTodo } from "lucide-react"
+import { CheckCheck, Plus, X, Circle, CheckCircle, CalendarDays, Flag, Trash2, Edit3, ArrowLeft, ChevronDown, ListTodo, Search } from "lucide-react"
 import type { Task } from "../../types"
+import { formatTime, formatDate, isSameDay } from "../../lib/utils"
+import Avatar from "../ui/Avatar"
+import Badge from "../ui/Badge"
+import Button from "../ui/Button"
+import Modal from "../ui/Modal"
 
 const now = new Date()
 const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -32,10 +37,10 @@ const initialTasks: Task[] = [
 
 const categories = ["All", "Work", "Design", "Engineering", "Product", "QA", "Events", "HR"]
 const priorityConfig = {
-  urgent: { label: "Urgent", color: "text-rose-600", bg: "bg-rose-100", dot: "bg-rose-500" },
-  high: { label: "High", color: "text-amber-600", bg: "bg-amber-100", dot: "bg-amber-500" },
-  medium: { label: "Medium", color: "text-blue-600", bg: "bg-blue-100", dot: "bg-blue-500" },
-  low: { label: "Low", color: "text-gray-500", bg: "bg-gray-100", dot: "bg-gray-400" },
+  urgent: { label: "Urgent", color: "text-dark-purple", bg: "bg-rose", dot: "bg-rose" },
+  high: { label: "High", color: "text-dark-purple", bg: "bg-dark-purple/15", dot: "bg-dark-purple" },
+  medium: { label: "Medium", color: "text-dark-purple", bg: "bg-light-green", dot: "bg-light-green" },
+  low: { label: "Low", color: "text-dark-purple/60", bg: "bg-light-gray", dot: "bg-gray" },
 }
 
 const filterPills = [
@@ -45,21 +50,6 @@ const filterPills = [
   { key: "important", label: "Important" },
   { key: "completed", label: "Completed" },
 ]
-
-function formatDate(date: Date) {
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-}
-
-function formatTime(date: Date) {
-  const h = date.getHours()
-  const m = date.getMinutes().toString().padStart(2, "0")
-  const ampm = h >= 12 ? "PM" : "AM"
-  return `${h % 12 || 12}:${m} ${ampm}`
-}
-
-function isSameDay(a: Date, b: Date) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
-}
 
 function dayLabel(date: Date): string {
   if (isSameDay(date, today)) return "Today"
@@ -80,6 +70,7 @@ function getGroupKey(date: Date): { label: string; order: number } {
 
 export default function Tasks() {
   const [tasks, setTasks] = useState<Task[]>(initialTasks)
+  const [search, setSearch] = useState("")
   const [filter, setFilter] = useState("all")
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [showAdd, setShowAdd] = useState(false)
@@ -119,6 +110,8 @@ export default function Tasks() {
   }
 
   const filtered = tasks.filter((t) => {
+    const matchSearch = !search.trim() || t.title.toLowerCase().includes(search.toLowerCase())
+    if (!matchSearch) return false
     const matchCompleted = filter !== "completed" || t.status === "done"
     const matchOpen = filter !== "completed" || filter === "all" || t.status === "todo"
     if (filter === "all" && !matchCompleted) return false
@@ -153,7 +146,7 @@ export default function Tasks() {
   return (
     <div className="h-full bg-light-gray flex flex-col">
       <div className="bg-off-white border-b border-gray/20 px-8 py-5">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-dark-purple flex items-center justify-center shadow-sm">
               <ListTodo size={17} className="text-off-white" />
@@ -174,26 +167,27 @@ export default function Tasks() {
                 <button key={c} onClick={() => setCategoryFilter(c)} className={`text-[11px] font-medium px-2.5 py-1 rounded-full whitespace-nowrap transition-colors ${categoryFilter === c ? "bg-dark-purple/15 text-dark-purple" : "text-dark-purple/40 hover:text-dark-purple"}`}>{c}</button>
               ))}
             </div>
-            <button onClick={() => { setEditingId(null); setAddTitle(""); setAddDesc(""); setAddPriority("medium"); setShowAdd(true) }} className="flex items-center gap-1.5 bg-dark-purple text-off-white text-xs font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition-opacity shadow-sm">
-              <Plus size={14} /> Add Task
-            </button>
+            <Button size="sm" onClick={() => { setEditingId(null); setAddTitle(""); setAddDesc(""); setAddPriority("medium"); setShowAdd(true) }}><Plus size={14} /> Add Task</Button>
           </div>
+        </div>
+        <div className="relative mb-3">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-purple/40" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks..." className="w-full bg-light-gray rounded-xl pl-10 pr-4 py-2.5 text-sm text-dark-purple placeholder-dark-purple/40 outline-none focus:ring-2 focus:ring-dark-purple/10" aria-label="Search tasks" />
+        </div>
+        <div className="flex items-center gap-1.5 overflow-x-auto">
+          {filterPills.map((p) => (
+            <button key={p.key} onClick={() => { setFilter(p.key); setSelectedTask(null) }} className={`text-xs font-semibold px-3.5 py-1.5 rounded-full whitespace-nowrap transition-colors ${filter === p.key ? "bg-dark-purple text-off-white" : "bg-light-gray text-dark-purple/60 hover:text-dark-purple hover:bg-gray/20"}`}>
+              {p.label}
+              {p.key !== "all" && p.key !== "completed" && (
+                <span className="ml-1.5 text-[9px] px-1 py-0.5 rounded-full bg-off-white/20">{filtered.filter((t) => t.status === "todo").length}</span>
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 overflow-y-auto">
-          <div className="bg-off-white border-b border-gray/20 px-7 py-3 flex items-center gap-1.5 overflow-x-auto">
-            {filterPills.map((p) => (
-              <button key={p.key} onClick={() => { setFilter(p.key); setSelectedTask(null) }} className={`text-xs font-semibold px-3.5 py-1.5 rounded-full whitespace-nowrap transition-colors ${filter === p.key ? "bg-dark-purple text-off-white" : "bg-light-gray text-dark-purple/60 hover:text-dark-purple hover:bg-gray/20"}`}>
-                {p.label}
-                {p.key !== "all" && p.key !== "completed" && (
-                  <span className="ml-1.5 text-[9px] px-1 py-0.5 rounded-full bg-off-white/20">{filtered.filter((t) => t.status === "todo").length}</span>
-                )}
-              </button>
-            ))}
-          </div>
-
           <div className="px-7 py-5 space-y-5">
             {groups.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center py-16">
@@ -204,7 +198,7 @@ export default function Tasks() {
             ) : groups.map((group) => (
               <div key={group.label}>
                 <div className="flex items-center gap-2 mb-2.5 px-1">
-                  <span className={`w-2 h-2 rounded-full ${group.label === "Overdue" ? "bg-rose-400" : group.label === "Today" ? "bg-amber-400" : group.label === "Completed" ? "bg-green" : "bg-dark-purple/20"}`} />
+                  <span className={`w-2 h-2 rounded-full ${group.label === "Overdue" ? "bg-rose" : group.label === "Today" ? "bg-dark-purple" : group.label === "Completed" ? "bg-green" : "bg-dark-purple/20"}`} />
                   <span className="text-[11px] font-semibold text-dark-purple/40 uppercase tracking-wider">{group.label}</span>
                   <span className="text-[10px] text-dark-purple/20">· {group.tasks.length}</span>
                 </div>
@@ -218,7 +212,7 @@ export default function Tasks() {
                         onClick={() => setSelectedTask(t)}
                         className={`group w-full flex items-center gap-3.5 px-5 py-3.5 border-b border-light-gray last:border-0 transition-all text-left ${isSel ? "bg-dark-purple/5" : "hover:bg-light-gray/50"}`}
                       >
-                        <button onClick={(e) => { e.stopPropagation(); toggleDone(t.id) }} className="shrink-0">
+                        <button onClick={(e) => { e.stopPropagation(); toggleDone(t.id) }} className="shrink-0" aria-label={t.status === "done" ? "Mark incomplete" : "Mark complete"}>
                           {t.status === "done" ? (
                             <CheckCircle size={18} className="text-green" />
                           ) : (
@@ -228,7 +222,7 @@ export default function Tasks() {
                         <div className={`flex-1 min-w-0 ${t.status === "done" ? "opacity-50" : ""}`}>
                           <div className="flex items-center gap-2">
                             <p className={`text-sm font-bold truncate ${t.status === "done" ? "text-dark-purple/50 line-through" : "text-dark-purple"}`}>{t.title}</p>
-                            <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${pc.bg} ${pc.color}`}>{pc.label}</span>
+                            <Badge variant={t.priority === "urgent" ? "warning" : t.priority === "high" ? "info" : t.priority === "medium" ? "success" : "default"} size="sm">{pc.label}</Badge>
                           </div>
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-xs text-dark-purple/50 flex items-center gap-1">
@@ -240,9 +234,7 @@ export default function Tasks() {
                             )}
                           </div>
                         </div>
-                        <div className="w-7 h-7 rounded-lg overflow-hidden shrink-0 ring-2 ring-off-white">
-                          <img src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${t.seed}&backgroundColor=eddbda`} alt="" className="w-full h-full object-cover" />
-                        </div>
+                        <Avatar seed={t.seed} size="sm" className="ring-2 ring-off-white" />
                       </button>
                     )
                   })}
@@ -257,25 +249,23 @@ export default function Tasks() {
             <div className="p-5">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-start gap-3">
-                  <button onClick={() => toggleDone(preview.id)} className="mt-0.5 shrink-0">
+                  <button onClick={() => toggleDone(preview.id)} className="mt-0.5 shrink-0" aria-label={preview.status === "done" ? "Mark incomplete" : "Mark complete"}>
                     {preview.status === "done" ? <CheckCircle size={20} className="text-green" /> : <Circle size={20} className="text-dark-purple/30 hover:text-dark-purple/50 transition-colors" />}
                   </button>
                   <div>
                     <h2 className={`text-base font-bold text-dark-purple leading-snug ${preview.status === "done" ? "line-through text-dark-purple/50" : ""}`}>{preview.title}</h2>
-                    <span className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1.5 ${priorityConfig[preview.priority].bg} ${priorityConfig[preview.priority].color}`}>{priorityConfig[preview.priority].label}</span>
+                    <Badge variant={preview.priority === "urgent" ? "warning" : preview.priority === "high" ? "info" : preview.priority === "medium" ? "success" : "default"} size="sm" className="mt-1.5">{priorityConfig[preview.priority].label}</Badge>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <button className="p-1.5 rounded-lg hover:bg-light-gray transition-colors"><Edit3 size={14} className="text-dark-purple/40" /></button>
-                  <button onClick={() => deleteTask(preview.id)} className="p-1.5 rounded-lg hover:bg-light-gray transition-colors"><Trash2 size={14} className="text-rose-500" /></button>
+                  <button className="p-1.5 rounded-lg hover:bg-light-gray transition-colors" aria-label="Edit task"><Edit3 size={14} className="text-dark-purple/40" /></button>
+                  <button onClick={() => deleteTask(preview.id)} className="p-1.5 rounded-lg hover:bg-light-gray transition-colors" aria-label="Delete task"><Trash2 size={14} className="text-dark-purple/50" /></button>
                 </div>
               </div>
 
               <div className="bg-light-gray rounded-2xl p-4 space-y-3 mb-5">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0 ring-2 ring-off-white">
-                    <img src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${preview.seed}&backgroundColor=eddbda`} alt="" className="w-full h-full object-cover" />
-                  </div>
+                  <Avatar seed={preview.seed} size="md" className="ring-2 ring-off-white" />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-dark-purple">{preview.assignee}</p>
                     <p className="text-[10px] text-dark-purple/40">Assignee</p>
@@ -328,9 +318,7 @@ export default function Tasks() {
                   <div className="space-y-3">
                     {preview.comments.map((c, i) => (
                       <div key={i} className="flex gap-2.5">
-                        <div className="w-6 h-6 rounded-lg overflow-hidden shrink-0 mt-0.5 ring-2 ring-off-white">
-                          <img src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${c.author.split(" ")[0]}&backgroundColor=eddbda`} alt="" className="w-full h-full object-cover" />
-                        </div>
+                        <Avatar seed={c.author.split(" ")[0]} size="sm" className="ring-2 ring-off-white" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className="text-xs font-bold text-dark-purple">{c.author}</span>
@@ -356,34 +344,26 @@ export default function Tasks() {
         </div>
       </div>
 
-      {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowAdd(false)}>
-          <div className="bg-off-white rounded-2xl p-6 w-[420px] shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-dark-purple">{editingId ? "Edit Task" : "New Task"}</h3>
-              <button onClick={() => setShowAdd(false)}><X size={18} className="text-dark-purple/50" /></button>
-            </div>
-            <input value={addTitle} onChange={(e) => setAddTitle(e.target.value)} placeholder="Task title" className="w-full bg-light-gray text-dark-purple text-sm px-3.5 py-2.5 rounded-xl mb-3 outline-none focus:ring-2 focus:ring-dark-purple/20" />
-            <textarea value={addDesc} onChange={(e) => setAddDesc(e.target.value)} placeholder="Description (optional)" rows={3} className="w-full bg-light-gray text-dark-purple text-sm px-3.5 py-2.5 rounded-xl mb-3 outline-none focus:ring-2 focus:ring-dark-purple/20 resize-none" />
-            <div className="grid grid-cols-2 gap-3 mb-5">
-              <select value={addPriority} onChange={(e) => setAddPriority(e.target.value as typeof addPriority)} className="bg-light-gray text-dark-purple text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-dark-purple/20">
-                <option value="urgent">Urgent</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-              <select value={addAssignee} onChange={(e) => setAddAssignee(e.target.value)} className="bg-light-gray text-dark-purple text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-dark-purple/20">
-                {["Sarah Johnson", "Jordan Kim", "Maya Patel", "Taylor Reed", "Alex Chen", "Emily Davis", "Marcus Lee", "Priya Sharma"].map((n) => <option key={n}>{n}</option>)}
-              </select>
-              <select value={addCategory} onChange={(e) => setAddCategory(e.target.value)} className="bg-light-gray text-dark-purple text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-dark-purple/20">
-                {categories.filter((c) => c !== "All").map((c) => <option key={c}>{c}</option>)}
-              </select>
-              <input type="date" value={selectedTask?.dueDate.toISOString().split("T")[0] ?? today.toISOString().split("T")[0]} className="bg-light-gray text-dark-purple text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-dark-purple/20" />
-            </div>
-            <button onClick={addTask} className="w-full bg-dark-purple text-off-white text-sm font-semibold py-2.5 rounded-xl hover:opacity-90 transition-opacity shadow-sm">{editingId ? "Save Changes" : "Add Task"}</button>
-          </div>
+      <Modal open={showAdd} onClose={() => setShowAdd(false)} title={editingId ? "Edit Task" : "New Task"}>
+        <input value={addTitle} onChange={(e) => setAddTitle(e.target.value)} placeholder="Task title" className="w-full bg-light-gray text-dark-purple text-sm px-3.5 py-2.5 rounded-xl mb-3 outline-none focus:ring-2 focus:ring-dark-purple/20" aria-label="Task title" />
+        <textarea value={addDesc} onChange={(e) => setAddDesc(e.target.value)} placeholder="Description (optional)" rows={3} className="w-full bg-light-gray text-dark-purple text-sm px-3.5 py-2.5 rounded-xl mb-3 outline-none focus:ring-2 focus:ring-dark-purple/20 resize-none" aria-label="Task description" />
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          <select value={addPriority} onChange={(e) => setAddPriority(e.target.value as typeof addPriority)} className="bg-light-gray text-dark-purple text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-dark-purple/20" aria-label="Priority">
+            <option value="urgent">Urgent</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <select value={addAssignee} onChange={(e) => setAddAssignee(e.target.value)} className="bg-light-gray text-dark-purple text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-dark-purple/20" aria-label="Assignee">
+            {["Sarah Johnson", "Jordan Kim", "Maya Patel", "Taylor Reed", "Alex Chen", "Emily Davis", "Marcus Lee", "Priya Sharma"].map((n) => <option key={n}>{n}</option>)}
+          </select>
+          <select value={addCategory} onChange={(e) => setAddCategory(e.target.value)} className="bg-light-gray text-dark-purple text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-dark-purple/20" aria-label="Category">
+            {categories.filter((c) => c !== "All").map((c) => <option key={c}>{c}</option>)}
+          </select>
+          <input type="date" value={selectedTask?.dueDate.toISOString().split("T")[0] ?? today.toISOString().split("T")[0]} className="bg-light-gray text-dark-purple text-sm px-3.5 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-dark-purple/20" aria-label="Due date" />
         </div>
-      )}
+        <Button fullWidth onClick={addTask}>{editingId ? "Save Changes" : "Add Task"}</Button>
+      </Modal>
     </div>
   )
 }

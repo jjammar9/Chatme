@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { Heart, Search, Video, Phone, Users } from "lucide-react"
+import Avatar from "../ui/Avatar"
 
 const members = [
   { name: "Sarah Johnson", seed: "Sarah" },
@@ -9,18 +10,17 @@ const members = [
   { name: "Taylor Reed", seed: "Taylor" },
 ]
 
-function VideoMessage() {
-  const [playing, setPlaying] = useState(false)
-
+function VideoMessage({ playing, onToggle }: { playing: boolean; onToggle: () => void }) {
   if (playing) {
     return (
       <div
         className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
-        onClick={() => setPlaying(false)}
+        onClick={onToggle}
       >
         <button
           className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
-          onClick={() => setPlaying(false)}
+          onClick={onToggle}
+          aria-label="Close video"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
             <path d="M18 6L6 18M6 6l12 12" />
@@ -36,7 +36,7 @@ function VideoMessage() {
   }
 
   return (
-    <div className="relative cursor-pointer group" onClick={() => setPlaying(true)}>
+    <div className="relative cursor-pointer group" onClick={onToggle}>
       <img
         src="https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=400&h=225&fit=crop"
         alt="Play video"
@@ -54,21 +54,20 @@ function VideoMessage() {
 }
 
 export default function ChatList() {
+  const [playing, setPlaying] = useState(false)
+
   return (
     <div className="h-full bg-light-gray flex flex-col">
+      <VideoMessage playing={playing} onToggle={() => setPlaying(!playing)} />
       <div className="flex items-center justify-between px-5 py-3 bg-off-white border-b border-light-gray">
         <div className="flex items-center gap-3">
           <div className="flex -space-x-2">
             {members.slice(0, 4).map((m) => (
-              <div key={m.seed} className="w-9 h-9 rounded-lg overflow-hidden bg-light-gray shrink-0 ring-2 ring-off-white">
-                <img
-                  src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${m.seed}&backgroundColor=eddbda`}
-                  alt={m.name}
-                  className="w-full h-full object-cover"
-                />
+              <div key={m.seed} className="ring-2 ring-off-white shrink-0 rounded-lg">
+                <Avatar seed={m.seed} alt={m.name} size="md" />
               </div>
             ))}
-            <div className="w-9 h-9 rounded-lg bg-dark-purple shrink-0 ring-2 ring-off-white flex items-center justify-center">
+            <div className="w-10 h-10 rounded-lg bg-dark-purple shrink-0 ring-2 ring-off-white flex items-center justify-center">
               <span className="text-[10px] font-bold text-off-white">+{members.length - 4}</span>
             </div>
           </div>
@@ -81,25 +80,23 @@ export default function ChatList() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-8 h-8 rounded-lg bg-dark-purple flex items-center justify-center cursor-pointer hover:bg-deep-purple transition-colors">
+          <button className="w-8 h-8 rounded-lg bg-dark-purple flex items-center justify-center hover:bg-deep-purple transition-colors" aria-label="Favourite">
             <Heart size={16} className="text-off-white" />
-          </span>
-          <span className="w-8 h-8 rounded-lg bg-dark-purple flex items-center justify-center cursor-pointer hover:bg-deep-purple transition-colors">
+          </button>
+          <button className="w-8 h-8 rounded-lg bg-dark-purple flex items-center justify-center hover:bg-deep-purple transition-colors" aria-label="Search">
             <Search size={16} className="text-off-white" />
-          </span>
-          <span className="w-8 h-8 rounded-lg bg-dark-purple flex items-center justify-center cursor-pointer hover:bg-deep-purple transition-colors">
+          </button>
+          <button className="w-8 h-8 rounded-lg bg-dark-purple flex items-center justify-center hover:bg-deep-purple transition-colors" aria-label="Video call">
             <Video size={16} className="text-off-white" />
-          </span>
-          <span className="w-8 h-8 rounded-lg bg-dark-purple flex items-center justify-center cursor-pointer hover:bg-deep-purple transition-colors">
+          </button>
+          <button className="w-8 h-8 rounded-lg bg-dark-purple flex items-center justify-center hover:bg-deep-purple transition-colors" aria-label="Phone call">
             <Phone size={16} className="text-off-white" />
-          </span>
+          </button>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto p-5 space-y-4">
         <div className="flex justify-start items-end gap-2">
-          <div className="w-8 h-8 rounded-lg overflow-hidden bg-light-gray shrink-0">
-            <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=Sarah&backgroundColor=eddbda" alt="" className="w-full h-full object-cover" />
-          </div>
+          <Avatar seed="Sarah" size="sm" />
           <div>
             <span className="text-xs font-bold text-dark-purple/60 block mb-1">Sarah Johnson</span>
             <div className="max-w-[70%] bg-white rounded-2xl rounded-bl-sm px-4 py-2.5">
@@ -109,9 +106,7 @@ export default function ChatList() {
           </div>
         </div>
         <div className="flex justify-start items-end gap-2">
-          <div className="w-8 h-8 rounded-lg overflow-hidden bg-light-gray shrink-0">
-            <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=Maya&backgroundColor=eddbda" alt="" className="w-full h-full object-cover" />
-          </div>
+          <Avatar seed="Maya" size="sm" />
           <div>
             <span className="text-xs font-bold text-dark-purple/60 block mb-1">Maya Patel</span>
             <div className="max-w-[70%] bg-white rounded-2xl rounded-bl-sm px-4 py-2.5">
@@ -128,14 +123,10 @@ export default function ChatList() {
               <span className="text-[10px] text-off-white/50 text-right block mt-1">10:44</span>
             </div>
           </div>
-          <div className="w-8 h-8 rounded-lg overflow-hidden bg-light-gray shrink-0">
-            <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=Alex&backgroundColor=eddbda" alt="" className="w-full h-full object-cover" />
-          </div>
+          <Avatar seed="Alex" size="sm" />
         </div>
         <div className="flex justify-start items-end gap-2">
-          <div className="w-8 h-8 rounded-lg overflow-hidden bg-light-gray shrink-0">
-            <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=Jordan&backgroundColor=eddbda" alt="" className="w-full h-full object-cover" />
-          </div>
+          <Avatar seed="Jordan" size="sm" />
           <div>
             <span className="text-xs font-bold text-dark-purple/60 block mb-1">Jordan Kim</span>
             <div className="max-w-[70%] bg-white rounded-2xl rounded-bl-sm overflow-hidden">
@@ -171,9 +162,7 @@ export default function ChatList() {
           </div>
         </div>
         <div className="flex justify-start items-end gap-2">
-          <div className="w-8 h-8 rounded-lg overflow-hidden bg-light-gray shrink-0">
-            <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=Taylor&backgroundColor=eddbda" alt="" className="w-full h-full object-cover" />
-          </div>
+          <Avatar seed="Taylor" size="sm" />
           <div>
             <span className="text-xs font-bold text-dark-purple/60 block mb-1">Taylor Reed</span>
             <div className="max-w-[70%] bg-white rounded-2xl rounded-bl-sm px-4 py-2.5">
@@ -186,21 +175,16 @@ export default function ChatList() {
           <div className="text-right">
             <span className="text-xs font-bold text-dark-purple/60 block mb-1 text-right">You</span>
             <div className="max-w-[70%] bg-dark-purple rounded-2xl rounded-br-sm overflow-hidden ml-auto relative">
-              <VideoMessage />
               <div className="px-4 pb-2.5 pt-2">
                 <p className="text-sm text-off-white">Check out this walkthrough of the new flow I recorded 📹</p>
                 <span className="text-[10px] text-off-white/50 text-right block mt-1">10:47</span>
               </div>
             </div>
           </div>
-          <div className="w-8 h-8 rounded-lg overflow-hidden bg-light-gray shrink-0">
-            <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=Alex&backgroundColor=eddbda" alt="" className="w-full h-full object-cover" />
-          </div>
+          <Avatar seed="Alex" size="sm" />
         </div>
         <div className="flex justify-start items-end gap-2">
-          <div className="w-8 h-8 rounded-lg overflow-hidden bg-light-gray shrink-0">
-            <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=Alex&backgroundColor=eddbda" alt="" className="w-full h-full object-cover" />
-          </div>
+          <Avatar seed="Alex" size="sm" />
           <div>
             <span className="text-xs font-bold text-dark-purple/60 block mb-1">Alex Chen</span>
             <div className="max-w-[70%] bg-white rounded-2xl rounded-bl-sm px-4 py-2.5">
@@ -210,9 +194,7 @@ export default function ChatList() {
           </div>
         </div>
         <div className="flex justify-start items-end gap-2">
-          <div className="w-8 h-8 rounded-lg overflow-hidden bg-light-gray shrink-0">
-            <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=Sarah&backgroundColor=eddbda" alt="" className="w-full h-full object-cover" />
-          </div>
+          <Avatar seed="Sarah" size="sm" />
           <div>
             <span className="text-xs font-bold text-dark-purple/60 block mb-1">Sarah Johnson</span>
             <div className="max-w-[70%] bg-white rounded-2xl rounded-bl-sm overflow-hidden">
@@ -235,9 +217,7 @@ export default function ChatList() {
           </div>
         </div>
         <div className="flex justify-start items-end gap-2">
-          <div className="w-8 h-8 rounded-lg overflow-hidden bg-light-gray shrink-0">
-            <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=Maya&backgroundColor=eddbda" alt="" className="w-full h-full object-cover" />
-          </div>
+          <Avatar seed="Maya" size="sm" />
           <div>
             <span className="text-xs font-bold text-dark-purple/60 block mb-1">Maya Patel</span>
             <div className="max-w-[85%] bg-white rounded-2xl rounded-bl-sm px-4 py-3">
@@ -294,7 +274,7 @@ export default function ChatList() {
             <span className="text-xs font-bold text-dark-purple/60 block mb-1 text-right">You</span>
             <div className="max-w-[75%] bg-dark-purple rounded-2xl rounded-br-sm py-4 ml-auto">
               <div className="flex items-center justify-center gap-4 px-10">
-                <button className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center hover:bg-white/25 transition-colors shrink-0">
+                <button className="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center hover:bg-white/25 transition-colors shrink-0" aria-label="Play voice message">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                     <path d="M8 5v14l11-7L8 5z" fill="white" />
                   </svg>
@@ -312,14 +292,12 @@ export default function ChatList() {
               <span className="text-[10px] text-off-white/50 font-mono block text-center mt-2 px-10">0:00 / 0:42</span>
             </div>
           </div>
-          <div className="w-8 h-8 rounded-lg overflow-hidden bg-light-gray shrink-0">
-            <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=Alex&backgroundColor=eddbda" alt="" className="w-full h-full object-cover" />
-          </div>
+          <Avatar seed="Alex" size="sm" />
         </div>
       </div>
       <div className="flex items-center gap-2 px-4 py-3 bg-off-white border-t border-light-gray">
         <div className="flex items-center gap-1 h-10">
-          <button className="w-10 h-10 rounded-lg bg-light-gray flex items-center justify-center hover:bg-gray transition-colors">
+          <button className="w-10 h-10 rounded-lg bg-light-gray flex items-center justify-center hover:bg-gray transition-colors" aria-label="Add emoji">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1b0036" strokeWidth="1.5" strokeLinecap="round">
               <circle cx="12" cy="12" r="10" />
               <path d="M8 14s1.5 2 4 2 4-2 4-2" />
@@ -327,14 +305,14 @@ export default function ChatList() {
               <line x1="15" y1="9" x2="15.01" y2="9" />
             </svg>
           </button>
-          <button className="w-10 h-10 rounded-lg bg-light-gray flex items-center justify-center hover:bg-gray transition-colors">
+          <button className="w-10 h-10 rounded-lg bg-light-gray flex items-center justify-center hover:bg-gray transition-colors" aria-label="Attach file">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1b0036" strokeWidth="1.5" strokeLinecap="round">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
               <polyline points="17 8 12 3 7 8" />
               <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
           </button>
-          <button className="w-10 h-10 rounded-lg bg-light-gray flex items-center justify-center hover:bg-gray transition-colors">
+          <button className="w-10 h-10 rounded-lg bg-light-gray flex items-center justify-center hover:bg-gray transition-colors" aria-label="Add image">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1b0036" strokeWidth="1.5" strokeLinecap="round">
               <rect x="3" y="3" width="18" height="18" rx="2" />
               <circle cx="8.5" cy="8.5" r="1.5" />
@@ -342,13 +320,13 @@ export default function ChatList() {
               <path d="M15 21l-4-4-5 5" />
             </svg>
           </button>
-          <button className="w-10 h-10 rounded-lg bg-light-gray flex items-center justify-center hover:bg-gray transition-colors">
+          <button className="w-10 h-10 rounded-lg bg-light-gray flex items-center justify-center hover:bg-gray transition-colors" aria-label="Record video">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1b0036" strokeWidth="1.5" strokeLinecap="round">
               <path d="M23 7l-7 5 7 5V7z" />
               <rect x="1" y="5" width="15" height="14" rx="2" />
             </svg>
           </button>
-          <button className="w-10 h-10 rounded-lg bg-light-gray flex items-center justify-center hover:bg-gray transition-colors">
+          <button className="w-10 h-10 rounded-lg bg-light-gray flex items-center justify-center hover:bg-gray transition-colors" aria-label="Record audio">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1b0036" strokeWidth="1.5" strokeLinecap="round">
               <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
               <path d="M19 10v2a7 7 0 01-14 0v-2" />
@@ -356,7 +334,7 @@ export default function ChatList() {
               <line x1="8" y1="23" x2="16" y2="23" />
             </svg>
           </button>
-          <button className="w-10 h-10 rounded-lg bg-light-gray flex items-center justify-center hover:bg-gray transition-colors">
+          <button className="w-10 h-10 rounded-lg bg-light-gray flex items-center justify-center hover:bg-gray transition-colors" aria-label="Share location">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1b0036" strokeWidth="1.5" strokeLinecap="round">
               <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
               <circle cx="12" cy="9" r="2.5" />
@@ -368,8 +346,9 @@ export default function ChatList() {
             type="text"
             placeholder="Type a message..."
             className="flex-1 bg-transparent text-sm text-dark-purple placeholder-dark-purple/40 outline-none"
+            aria-label="Message input"
           />
-          <button className="w-10 h-10 rounded-lg bg-dark-purple flex items-center justify-center hover:bg-deep-purple transition-colors shrink-0">
+          <button className="w-10 h-10 rounded-lg bg-dark-purple flex items-center justify-center hover:bg-deep-purple transition-colors shrink-0" aria-label="Send message">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
               <line x1="22" y1="2" x2="11" y2="13" />
               <polygon points="22 2 15 22 11 13 2 9 22 2" />
@@ -380,4 +359,3 @@ export default function ChatList() {
     </div>
   )
 }
-

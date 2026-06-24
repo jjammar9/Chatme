@@ -1,5 +1,8 @@
 import { useState } from "react"
 import { Search, Users, Plus } from "lucide-react"
+import Avatar from "../ui/Avatar"
+import Badge from "../ui/Badge"
+import Button from "../ui/Button"
 
 const communities = [
   {
@@ -140,33 +143,29 @@ export default function Communities() {
             <h1 className="text-2xl font-bold text-dark-purple">Communities</h1>
             <p className="text-sm text-dark-purple/50 mt-1">{filtered.length} communities · 34 online</p>
           </div>
-          <button className="flex items-center gap-2 bg-dark-purple text-off-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-deep-purple transition-colors">
-            <Plus size="18" />
-            <span>Create</span>
-          </button>
+          <Button><Plus size="18" /> <span>Create</span></Button>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-purple/40" />
-            <input
-              type="text"
-              placeholder="Search communities..."
-              className="w-full bg-light-gray rounded-xl pl-10 pr-4 py-2.5 text-sm text-dark-purple placeholder-dark-purple/40 outline-none"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            {tags.map((t) => (
-              <button
-                key={t}
-                onClick={() => setActiveTag(t)}
-                className={`text-sm font-medium px-4 py-2 rounded-full transition-colors ${
-                  activeTag === t ? "bg-dark-purple text-off-white" : "bg-light-gray text-dark-purple/70 hover:bg-gray/30"
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
+        <div className="relative mb-4">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-purple/40" />
+          <input
+            type="text"
+            placeholder="Search communities..."
+            className="w-full bg-light-gray rounded-xl pl-10 pr-4 py-2.5 text-sm text-dark-purple placeholder-dark-purple/40 outline-none"
+            aria-label="Search communities"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          {tags.map((t) => (
+            <button
+              key={t}
+              onClick={() => setActiveTag(t)}
+              className={`text-sm font-medium px-4 py-2 rounded-full transition-colors ${
+                activeTag === t ? "bg-dark-purple text-off-white" : "bg-light-gray text-dark-purple/70 hover:bg-gray/30"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
         </div>
       </div>
       <div className="flex-1 px-8 py-6">
@@ -176,12 +175,12 @@ export default function Communities() {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex -space-x-2">
                   {c.seeds.map((seed) => (
-                    <div key={seed} className="w-11 h-11 rounded-xl overflow-hidden bg-light-gray ring-2 ring-off-white">
-                      <img src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${seed}&backgroundColor=eddbda`} alt="" className="w-full h-full object-cover" />
+                    <div key={seed} className="ring-2 ring-off-white rounded-xl shrink-0">
+                      <Avatar seed={seed} size="md" />
                     </div>
                   ))}
                   {c.members > 3 && (
-                    <div className="w-11 h-11 rounded-xl bg-dark-purple ring-2 ring-off-white flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-dark-purple ring-2 ring-off-white flex items-center justify-center">
                       <span className="text-sm font-bold text-off-white">+{c.members - 3}</span>
                     </div>
                   )}
@@ -196,12 +195,12 @@ export default function Communities() {
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-lg font-bold text-dark-purple">{c.name}</h3>
                 {c.unread > 0 && (
-                  <span className="bg-rose text-dark-purple text-xs font-bold px-2.5 py-1 rounded-full">{c.unread} new</span>
+                  <Badge variant="warning">{c.unread} new</Badge>
                 )}
               </div>
               <div className="flex items-center gap-2 mb-3">
                 {c.tags.map((tag) => (
-                  <span key={tag} className="text-xs font-medium text-dark-purple/50 bg-light-gray px-3 py-1 rounded-full">{tag}</span>
+                  <Badge key={tag} variant="default" size="sm">{tag}</Badge>
                 ))}
               </div>
               <div className="flex items-center justify-between pt-3 border-t border-light-gray">

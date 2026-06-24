@@ -24,6 +24,7 @@ export default function Modal({
   children,
 }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -36,6 +37,7 @@ export default function Modal({
     if (open) {
       document.addEventListener("keydown", handleKeyDown)
       document.body.style.overflow = "hidden"
+      contentRef.current?.focus()
     }
     return () => {
       document.removeEventListener("keydown", handleKeyDown)
@@ -48,15 +50,19 @@ export default function Modal({
   return (
     <div
       ref={overlayRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title || "Dialog"}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onClick={(e) => {
         if (e.target === overlayRef.current) onClose()
       }}
     >
       <div
+        ref={contentRef}
+        tabIndex={-1}
         className={`
-          w-full ${sizeStyles[size]} bg-off-white rounded-2xl shadow-xl
-          animate-in fade-in zoom-in-95
+          w-full ${sizeStyles[size]} bg-off-white rounded-2xl shadow-xl outline-none
           ${className}
         `}
       >
@@ -65,6 +71,7 @@ export default function Modal({
             <h2 className="text-lg font-semibold text-deep-purple">{title}</h2>
             <button
               onClick={onClose}
+              aria-label="Close dialog"
               className="text-gray hover:text-deep-purple transition-colors cursor-pointer"
             >
               <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">

@@ -1,6 +1,10 @@
 import { useState } from "react"
-import { Search, Plus, X, FileText, Image, Video, Music, Link as LinkIcon, File, Download, Forward, Clock, User, CalendarDays, ChevronDown, FolderOpen, Tag } from "lucide-react"
+import { Search, Plus, X, FileText, Image, Video, Music, Link as LinkIcon, File, Download, Forward, Clock, CalendarDays, ChevronDown, FolderOpen } from "lucide-react"
 import type { FileItem } from "../../types"
+import { formatTime, formatDate, isSameDay, getAvatarUrl } from "../../lib/utils"
+import Avatar from "../ui/Avatar"
+import Button from "../ui/Button"
+import Badge from "../ui/Badge"
 
 const seeds = ["Sarah", "Jordan", "Maya", "Taylor", "Alex", "Emily", "Marcus", "Priya"]
 
@@ -32,21 +36,6 @@ const allFiles: FileItem[] = [
   { id: "14", name: "Bug Tracker Export.csv", type: "document", size: "0.3 MB", timestamp: lastWeek, sender: "Priya Sharma", seed: "Priya", description: "CSV export of all open bugs from the tracker." },
   { id: "15", name: "Marketing Assets.zip", type: "document", size: "12 MB", timestamp: lastWeek, sender: "Emily Davis", seed: "Emily", description: "ZIP archive of all marketing materials for the release." },
 ]
-
-function formatTime(date: Date): string {
-  const h = date.getHours()
-  const m = date.getMinutes().toString().padStart(2, "0")
-  const ampm = h >= 12 ? "PM" : "AM"
-  return `${h % 12 || 12}:${m} ${ampm}`
-}
-
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-}
-
-function isSameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
-}
 
 function getDayLabel(date: Date): string {
   if (isSameDay(date, today)) return "Today"
@@ -80,12 +69,12 @@ const filterTabs = [
   { key: "link", label: "Links", icon: LinkIcon },
 ] as const
 
-const typeConfig: Record<string, { icon: React.ComponentType<{ size?: number; className?: string }>; color: string; bg: string; badge: string }> = {
-  document: { icon: FileText, color: "text-blue-600", bg: "bg-blue-50", badge: "bg-blue-100 text-blue-700" },
-  image: { icon: Image, color: "text-purple-600", bg: "bg-purple-50", badge: "bg-purple-100 text-purple-700" },
-  video: { icon: Video, color: "text-rose-600", bg: "bg-rose-50", badge: "bg-rose-100 text-rose-700" },
-  audio: { icon: Music, color: "text-amber-600", bg: "bg-amber-50", badge: "bg-amber-100 text-amber-700" },
-  link: { icon: LinkIcon, color: "text-cyan-600", bg: "bg-cyan-50", badge: "bg-cyan-100 text-cyan-700" },
+const typeConfig: Record<string, { icon: React.ComponentType<{ size?: number; className?: string }>; color: string; bg: string }> = {
+  document: { icon: FileText, color: "text-dark-purple", bg: "bg-dark-purple/10" },
+  image: { icon: Image, color: "text-dark-purple", bg: "bg-rose/30" },
+  video: { icon: Video, color: "text-dark-purple", bg: "bg-light-green" },
+  audio: { icon: Music, color: "text-dark-purple", bg: "bg-dark-purple/10" },
+  link: { icon: LinkIcon, color: "text-dark-purple", bg: "bg-rose/20" },
 }
 
 function FileSizeBar({ size }: { size: string }) {
@@ -120,7 +109,7 @@ export default function Files() {
   return (
     <div className="h-full bg-light-gray flex flex-col">
       <div className="bg-off-white border-b border-gray/20 px-8 py-5">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-dark-purple flex items-center justify-center shadow-sm">
               <FolderOpen size={17} className="text-off-white" />
@@ -130,15 +119,11 @@ export default function Files() {
               <p className="text-[11px] text-dark-purple/40">{allFiles.length} files</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-purple/30" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search files..." className="w-56 bg-light-gray text-dark-purple text-sm pl-8 pr-3 py-2 rounded-lg outline-none focus:ring-2 focus:ring-dark-purple/20 placeholder:text-dark-purple/30 transition-shadow" />
-            </div>
-            <button className="flex items-center gap-1.5 bg-dark-purple text-off-white text-xs font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition-opacity shadow-sm">
-              <Plus size={14} /> Upload
-            </button>
-          </div>
+          <Button size="sm"><Plus size={14} /> Upload</Button>
+        </div>
+        <div className="relative">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-purple/40" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search files..." className="w-full bg-light-gray rounded-xl pl-10 pr-4 py-2.5 text-sm text-dark-purple placeholder-dark-purple/40 outline-none focus:ring-2 focus:ring-dark-purple/10" aria-label="Search files" />
         </div>
       </div>
 
@@ -169,7 +154,7 @@ export default function Files() {
               )
             })}
             <div className="w-px h-5 bg-gray/20 mx-2" />
-            <button onClick={() => setSortNewest(!sortNewest)} className="flex items-center gap-1 text-xs font-medium text-dark-purple/50 hover:text-dark-purple px-2 py-1.5 rounded-lg hover:bg-light-gray transition-colors whitespace-nowrap">
+            <button onClick={() => setSortNewest(!sortNewest)} className="flex items-center gap-1 text-xs font-medium text-dark-purple/50 hover:text-dark-purple px-2 py-1.5 rounded-lg hover:bg-light-gray transition-colors whitespace-nowrap" aria-label="Sort files">
               <Clock size={12} />
               {sortNewest ? "Newest" : "Oldest"}
               <ChevronDown size={11} className={`transition-transform ${sortNewest ? "" : "rotate-180"}`} />
@@ -199,14 +184,14 @@ export default function Files() {
                       <button
                         key={f.id}
                         onClick={() => setSelectedFile(f)}
-                        className={`group w-full flex items-center gap-3.5 px-5 py-3.5 border-b border-light-gray last:border-0 transition-all ${
+                        className={`group w-full flex items-center gap-3.5 px-5 py-3.5 border-b border-light-gray last:border-0 transition-all text-left ${
                           isSel ? "bg-dark-purple/5" : "hover:bg-light-gray/50"
                         }`}
                       >
                         <div className={`w-10 h-10 rounded-xl ${tc.bg} flex items-center justify-center shrink-0 ring-1 ring-black/5`}>
                           <Icon size={18} className={tc.color} />
                         </div>
-                        <div className="flex-1 min-w-0 text-left">
+                        <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold text-dark-purple truncate">{f.name}</p>
                           <p className="text-xs text-dark-purple/50 mt-0.5">{f.sender} · {f.size}</p>
                         </div>
@@ -239,14 +224,12 @@ export default function Files() {
                   <div className="w-full h-full flex flex-col items-center justify-center gap-2">
                     {(() => {
                       const PIcon = typeConfig[previewFile.type].icon
-                      return <PIcon size={44} className={typeConfig[previewFile.type].color + " opacity-40"} />
+                      return <PIcon size={44} className="text-dark-purple/20" />
                     })()}
                     <span className="text-xs font-medium text-dark-purple/30">{previewFile.type.toUpperCase()} file</span>
                   </div>
                 )}
-                <span className={`absolute top-3 left-3 text-[10px] font-semibold px-2 py-0.5 rounded-full ${typeConfig[previewFile.type].badge}`}>
-                  {previewFile.type}
-                </span>
+                <Badge variant="info" size="sm" className="absolute top-3 left-3">{previewFile.type}</Badge>
               </div>
 
               <h2 className="text-base font-bold text-dark-purple leading-snug break-words mb-1">{previewFile.name}</h2>
@@ -256,9 +239,7 @@ export default function Files() {
 
               <div className="bg-light-gray rounded-2xl p-4 space-y-4 mb-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0 ring-2 ring-off-white">
-                    <img src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${previewFile.seed}&backgroundColor=eddbda`} alt="" className="w-full h-full object-cover" />
-                  </div>
+                  <Avatar seed={previewFile.seed} size="md" className="ring-2 ring-off-white" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-dark-purple">{previewFile.sender}</p>
                     <p className="text-[11px] text-dark-purple/40">Shared this file</p>
@@ -282,12 +263,8 @@ export default function Files() {
               </div>
 
               <div className="flex gap-2.5">
-                <button className="flex items-center justify-center gap-1.5 flex-1 bg-dark-purple text-off-white text-xs font-semibold py-2.5 rounded-xl hover:opacity-90 transition-opacity shadow-sm">
-                  <Download size={14} /> Download
-                </button>
-                <button className="flex items-center justify-center gap-1.5 flex-1 border border-gray/20 text-dark-purple text-xs font-semibold py-2.5 rounded-xl hover:bg-light-gray transition-colors">
-                  <Forward size={14} /> Forward
-                </button>
+                <Button size="sm" fullWidth><Download size={14} /> Download</Button>
+                <Button size="sm" variant="outline" fullWidth><Forward size={14} /> Forward</Button>
               </div>
             </div>
           ) : (

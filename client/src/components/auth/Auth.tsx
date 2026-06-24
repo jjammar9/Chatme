@@ -117,7 +117,7 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
                 type={showPw ? "text" : "password"} placeholder="Password"
                 className="w-full bg-transparent border border-off-white/15 text-off-white text-sm pl-10 pr-10 py-3 rounded-xl outline-none focus:border-off-white/40 transition-colors placeholder:text-off-white/25"
               />
-              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3.5 top-1/2 -translate-y-1/2">
+              <button type="button" onClick={() => setShowPw(!showPw)} aria-label={showPw ? "Hide password" : "Show password"} className="absolute right-3.5 top-1/2 -translate-y-1/2">
                 {showPw ? <EyeOff size={16} className="text-off-white/30" /> : <Eye size={16} className="text-off-white/30" />}
               </button>
             </div>

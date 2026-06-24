@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { User, Shield, Bell, Palette, EyeOff, MessageCircle, Database, Info, Sun, Moon, Smartphone, Monitor, Camera, Check, X, Circle, Trash2, ChevronRight, Globe, Lock, Eye, Wifi, Download } from "lucide-react"
+import { User, Shield, Bell, Palette, EyeOff, MessageCircle, Database, Info, Sun, Moon, Smartphone, Monitor, Camera, Check, X, Trash2, ChevronRight, Globe, Wifi, Search } from "lucide-react"
 import type { SettingsCategory, CategoryConfig } from "../../types"
 import { useTheme } from "../../context/ThemeContext"
 
@@ -35,6 +35,7 @@ function ColorSwatch({ color, label, active, onClick }: { color: string; label: 
 
 export default function Settings() {
   const [activeCat, setActiveCat] = useState<SettingsCategory>("profile")
+  const [search, setSearch] = useState("")
 
   const [name, setName] = useState("Jamie Rivera")
   const [email, setEmail] = useState("jamie.r@chatme.app")
@@ -74,35 +75,44 @@ export default function Settings() {
 
   const Icon = categories.find((c) => c.key === activeCat)?.icon
 
+  const searchQ = search.toLowerCase().trim()
+  const filteredCategories = searchQ ? categories.filter((c) => c.label.toLowerCase().includes(searchQ)) : categories
+  const shownCat = filteredCategories.some((c) => c.key === activeCat) ? activeCat : (filteredCategories[0]?.key ?? activeCat)
+
   return (
     <div className="h-full bg-light-gray flex flex-col">
       <div className="bg-off-white border-b border-gray/20 px-8 py-5">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-dark-purple flex items-center justify-center shadow-sm">
-            {Icon && <Icon size={17} className="text-off-white" />}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-dark-purple flex items-center justify-center shadow-sm">
+              {Icon && <Icon size={17} className="text-off-white" />}
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-dark-purple">Settings</h1>
+              <p className="text-[11px] text-dark-purple/40">{categories.find((c) => c.key === shownCat)?.label}</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg font-bold text-dark-purple">Settings</h1>
-            <p className="text-[11px] text-dark-purple/40">{categories.find((c) => c.key === activeCat)?.label}</p>
-          </div>
+        </div>
+        <div className="relative mb-3">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-purple/40" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search settings..." className="w-full bg-light-gray rounded-xl pl-10 pr-4 py-2.5 text-sm text-dark-purple placeholder-dark-purple/40 outline-none focus:ring-2 focus:ring-dark-purple/10" aria-label="Search settings" />
+        </div>
+        <div className="flex items-center gap-1.5 overflow-x-auto">
+          {filteredCategories.map((cat) => {
+            const CatIcon = cat.icon
+            return (
+              <button key={cat.key} onClick={() => setActiveCat(cat.key)} className={`flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full whitespace-nowrap transition-colors ${shownCat === cat.key ? "bg-dark-purple text-off-white" : "bg-light-gray text-dark-purple/60 hover:text-dark-purple hover:bg-gray/20"}`}>
+                <CatIcon size={13} />
+                {cat.label}
+              </button>
+            )
+          })}
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 overflow-y-auto">
-          <div className="bg-off-white border-b border-gray/20 px-7 py-3 flex items-center gap-1.5 overflow-x-auto">
-            {categories.map((cat) => {
-              const CatIcon = cat.icon
-              return (
-                <button key={cat.key} onClick={() => setActiveCat(cat.key)} className={`flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full whitespace-nowrap transition-colors ${activeCat === cat.key ? "bg-dark-purple text-off-white" : "bg-light-gray text-dark-purple/60 hover:text-dark-purple hover:bg-gray/20"}`}>
-                  <CatIcon size={13} />
-                  {cat.label}
-                </button>
-              )
-            })}
-          </div>
-          <div className="px-8 py-6">
-          {activeCat === "profile" && (
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-8 py-6">
+          {shownCat === "profile" && (
             <div className="max-w-2xl space-y-6">
               <div className="flex items-center gap-5">
                 <div className="relative">
@@ -161,7 +171,7 @@ export default function Settings() {
             </div>
           )}
 
-          {activeCat === "account" && (
+          {shownCat === "account" && (
             <div className="max-w-2xl space-y-5">
               <div className="bg-off-white rounded-2xl border border-gray/10 shadow-sm p-5 space-y-4">
                 <h3 className="text-sm font-bold text-dark-purple">Security</h3>
@@ -202,7 +212,7 @@ export default function Settings() {
             </div>
           )}
 
-          {activeCat === "notifications" && (
+          {shownCat === "notifications" && (
             <div className="max-w-2xl space-y-5">
               <div className="bg-off-white rounded-2xl border border-gray/10 shadow-sm p-5 space-y-4">
                 <h3 className="text-sm font-bold text-dark-purple">Notifications</h3>
@@ -241,7 +251,7 @@ export default function Settings() {
             </div>
           )}
 
-          {activeCat === "appearance" && (
+          {shownCat === "appearance" && (
             <div className="max-w-2xl space-y-5">
               <div className="bg-off-white rounded-2xl border border-gray/10 shadow-sm p-5 space-y-4">
                 <h3 className="text-sm font-bold text-dark-purple">Theme</h3>
@@ -272,7 +282,7 @@ export default function Settings() {
                 <h3 className="text-sm font-bold text-dark-purple">Font Size</h3>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-dark-purple/50">A</span>
-                  <input type="range" min="12" max="22" value={fontSize} onChange={(e) => setFontSize(Number(e.target.value))} className="flex-1 accent-dark-purple h-1.5 rounded-full appearance-none bg-light-gray [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-dark-purple [&::-webkit-slider-thumb]:shadow-sm" />
+                  <input type="range" min="12" max="22" value={fontSize} onChange={(e) => setFontSize(Number(e.target.value))} aria-label="Font size" className="flex-1 accent-dark-purple h-1.5 rounded-full appearance-none bg-light-gray [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-dark-purple [&::-webkit-slider-thumb]:shadow-sm" />
                   <span className="text-lg text-dark-purple/50 font-bold">A</span>
                 </div>
                 <p className="text-xs text-dark-purple/40 text-center">Preview: <span style={{ fontSize }} className="font-semibold text-dark-purple">The quick brown fox jumps over the lazy dog</span></p>
@@ -280,7 +290,7 @@ export default function Settings() {
             </div>
           )}
 
-          {activeCat === "privacy" && (
+          {shownCat === "privacy" && (
             <div className="max-w-2xl space-y-5">
               <div className="bg-off-white rounded-2xl border border-gray/10 shadow-sm p-5 space-y-4">
                 <h3 className="text-sm font-bold text-dark-purple">Online Status</h3>
@@ -329,7 +339,7 @@ export default function Settings() {
             </div>
           )}
 
-          {activeCat === "chat" && (
+          {shownCat === "chat" && (
             <div className="max-w-2xl space-y-5">
               <div className="bg-off-white rounded-2xl border border-gray/10 shadow-sm p-5 space-y-4">
                 <h3 className="text-sm font-bold text-dark-purple">Chat Settings</h3>
@@ -363,7 +373,7 @@ export default function Settings() {
             </div>
           )}
 
-          {activeCat === "storage" && (
+          {shownCat === "storage" && (
             <div className="max-w-2xl space-y-5">
               <div className="bg-off-white rounded-2xl border border-gray/10 shadow-sm p-5 space-y-4">
                 <div className="flex items-center justify-between">
@@ -426,7 +436,7 @@ export default function Settings() {
             </div>
           )}
 
-          {activeCat === "about" && (
+          {shownCat === "about" && (
             <div className="max-w-2xl space-y-5">
               <div className="bg-off-white rounded-2xl border border-gray/10 shadow-sm p-8 text-center">
                 <div className="w-16 h-16 rounded-2xl bg-dark-purple flex items-center justify-center mx-auto mb-4 shadow-md">
@@ -463,7 +473,6 @@ export default function Settings() {
           )}
         </div>
         </div>
-      </div>
 
     </div>
   )

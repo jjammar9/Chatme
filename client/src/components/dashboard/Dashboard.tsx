@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { MessageSquare, Users, FileText, UserPlus, Send, Camera, MapPin, Calendar, ClipboardList, Search, Clock, Sparkles, X, Bot, SendHorizonal } from "lucide-react"
 import { dashboardStats, mockTasks, mockContacts, mockCommunities } from "../../data/mock"
 import { useToast } from "../../context/ToastContext"
+import Avatar from "../ui/Avatar"
+import { getAvatarUrl, formatTime } from "../../lib/utils"
 
 const activities = [
   { user: "Sarah Johnson", action: "reacted 👍 to your message", time: "2 min ago", seed: "Sarah" },
@@ -26,18 +28,58 @@ const allSearchData = [
   ...mockCommunities.map((c) => ({ label: c.name, category: "Group", seed: c.seeds[0] })),
 ]
 
-function formatTime(d: Date) {
-  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
-}
+function answerQuery(msg: string): string {
+  const q = msg.toLowerCase()
 
-const aiResponses: Record<string, string> = {
-  hello: "Hi there! How can I help you today?",
-  tasks: "You have 12 tasks total — 11 still to do and 1 completed. The most urgent one is 'Finalize Q3 roadmap presentation'.",
-  "what's due today": "You have 2 tasks due today: 'Finalize Q3 roadmap presentation' (urgent) and 'Review design system components' (high priority).",
-  contacts: "You have 8 contacts. 4 are currently online: Sarah Johnson, Alex Chen, Jordan Kim, and Taylor Reed.",
-  groups: "You're in 12 groups. The most active one is 'Design Talks' with 7 members online.",
-  files: "You've shared 15 files. The most recent is 'sprint-plan.pdf' shared by Sarah Johnson.",
-  messages: "You have 1,284 messages across your chats.",
+  if (q.includes("hello") || q.includes("hi ") || q === "hi" || q.includes("hey")) {
+    return "Hi there! I can look up your tasks, contacts, groups, and files. Try asking me something!"
+  }
+
+  if (q.includes("task") || q.includes("todo") || q.includes("to do") || q.includes("due")) {
+    const today = new Date()
+    const todayStr = today.toDateString()
+    const dueToday = mockTasks.filter((t) => t.dueDate.toDateString() === todayStr && t.status === "todo")
+    const totalTodo = mockTasks.filter((t) => t.status === "todo").length
+    const done = mockTasks.filter((t) => t.status === "done").length
+    if (dueToday.length > 0) {
+      const list = dueToday.map((t) => `• ${t.title} (${t.priority})`).join("\n")
+      return `You have ${totalTodo} unfinished tasks (${done} done). ${dueToday.length} due today:\n${list}`
+    }
+    if (q.includes("all") || q.includes("everything")) {
+      const urgent = mockTasks.filter((t) => t.priority === "urgent" && t.status === "todo")
+      return `All tasks: ${mockTasks.length} total, ${totalTodo} to do, ${done} done. ${urgent.length > 0 ? `Urgent: ${urgent.map((t) => t.title).join(", ")}` : ""}`
+    }
+    return `You have ${totalTodo} unfinished tasks and ${done} completed. Try "what's due today?" for more detail.`
+  }
+
+  if (q.includes("contact") || q.includes("people") || q.includes("who")) {
+    const online = mockContacts.filter((c) => c.online)
+    const favs = mockContacts.filter((c) => c.favorite)
+    const names = mockContacts.map((c) => c.name).join(", ")
+    return `You have ${mockContacts.length} contacts. ${online.length} currently online: ${online.map((c) => c.name).join(", ")}. Favorites: ${favs.map((c) => c.name).join(", ")}.`
+  }
+
+  if (q.includes("group") || q.includes("community") || q.includes("channel")) {
+    const mostActive = mockCommunities.reduce((a, b) => (a.online > b.online ? a : b))
+    return `You're in ${mockCommunities.length} groups. Most active: "${mostActive.name}" (${mostActive.online}/${mostActive.members} online). Total members across all groups: ${mockCommunities.reduce((s, c) => s + c.members, 0)}.`
+  }
+
+  if (q.includes("file") || q.includes("document") || q.includes("upload")) {
+    return `Files are in the Files tab. You can filter by Documents, Images, Videos, Audio, or Links.`
+  }
+
+  const taskMatch = mockTasks.find((t) => t.title.toLowerCase().includes(q))
+  if (taskMatch) return `Found task "${taskMatch.title}" — ${taskMatch.status === "done" ? "completed" : taskMatch.priority + " priority"}, due ${taskMatch.dueDate.toDateString()}`
+  const contactMatch = mockContacts.find((c) => c.name.toLowerCase().includes(q))
+  if (contactMatch) return `Found contact "${contactMatch.name}" — ${contactMatch.online ? "online" : "offline"}, ${contactMatch.role}`
+  const groupMatch = mockCommunities.find((c) => c.name.toLowerCase().includes(q))
+  if (groupMatch) return `Found group "${groupMatch.name}" — ${groupMatch.online}/${groupMatch.members} online, tags: ${groupMatch.tags.join(", ")}`
+
+  return `I can answer questions about your workspace. Try:
+• "What's due today?" — tasks due now
+• "Show my contacts" — people & online status
+• "My groups" — community overview
+• "Search [name]" — find something specific`
 }
 
 export default function Dashboard() {
@@ -49,7 +91,8 @@ export default function Dashboard() {
   const [chatMsg, setChatMsg] = useState("")
   const [chatHistory, setChatHistory] = useState<{ role: "user" | "bot"; text: string }[]>([])
 
-  useEffect(() => { toast("Welcome to Chatme", "success") }, [])
+  const welcomeShown = useRef(false)
+  useEffect(() => { if (!welcomeShown.current) { welcomeShown.current = true; toast("Welcome to Chatme", "success") } }, [])
   useEffect(() => { const id = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(id) }, [])
 
   const hour = now.getHours()
@@ -69,12 +112,11 @@ export default function Dashboard() {
 
   const handleChatSend = () => {
     if (!chatMsg.trim()) return
-    const userMsg = chatMsg.trim().toLowerCase()
-    setChatHistory((prev) => [...prev, { role: "user", text: chatMsg.trim() }])
+    const userMsg = chatMsg.trim()
+    setChatHistory((prev) => [...prev, { role: "user", text: userMsg }])
     setChatMsg("")
     setTimeout(() => {
-      const match = Object.entries(aiResponses).find(([key]) => userMsg.includes(key))
-      setChatHistory((prev) => [...prev, { role: "bot", text: match ? match[1] : "I can help you find tasks, contacts, groups, files, or messages. Try asking something like 'what's due today?' or 'show my contacts'." }])
+      setChatHistory((prev) => [...prev, { role: "bot", text: answerQuery(userMsg) }])
     }, 400)
   }
 
@@ -134,9 +176,7 @@ export default function Dashboard() {
               ) : (
                 filteredSearch.slice(0, 8).map((item, i) => (
                   <div key={i} className="flex items-center gap-2.5 px-4 py-2 hover:bg-light-gray transition-colors cursor-pointer">
-                    <div className="w-6 h-6 rounded-md overflow-hidden bg-light-gray shrink-0">
-                      <img src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${item.seed}&backgroundColor=eddbda`} alt="" className="w-full h-full object-cover" />
-                    </div>
+                    <Avatar seed={item.seed} size="sm" className="rounded-md" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-dark-purple truncate">{item.label}</p>
                     </div>
@@ -170,10 +210,8 @@ export default function Dashboard() {
             <h2 className="text-sm font-bold text-dark-purple mb-4">Recent Activity</h2>
             <div className="space-y-0">
               {activities.map((a, i) => (
-                <div key={i} className="flex items-center gap-3 py-3 border-b border-light-gray last:border-0">
-                  <div className="w-8 h-8 rounded-lg overflow-hidden bg-light-gray shrink-0">
-                    <img src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${a.seed}&backgroundColor=eddbda`} alt="" className="w-full h-full object-cover" />
-                  </div>
+                  <div key={i} className="flex items-center gap-3 py-3 border-b border-light-gray last:border-0">
+                  <Avatar seed={a.seed} size="sm" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-dark-purple">
                       <span className="font-semibold">{a.user}</span>{" "}
@@ -217,12 +255,7 @@ export default function Dashboard() {
               <div className="flex gap-3">
                 {frequent.slice(0, 4).map((f) => (
                   <div key={f.seed} className="flex flex-col items-center gap-1 cursor-pointer">
-                    <div className="relative">
-                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-light-gray">
-                        <img src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${f.seed}&backgroundColor=eddbda`} alt="" className="w-full h-full object-cover" />
-                      </div>
-                      {f.online && <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green ring-2 ring-off-white" />}
-                    </div>
+                    <Avatar seed={f.seed} size="md" status={f.online ? "online" : undefined} />
                     <span className="text-[10px] text-dark-purple/70 font-medium">{f.name}</span>
                   </div>
                 ))}
@@ -262,13 +295,13 @@ export default function Dashboard() {
       </div>
 
       {chatOpen && (
-        <div className="fixed bottom-6 right-6 w-80 h-96 bg-off-white rounded-2xl shadow-2xl border border-gray/20 flex flex-col z-50 overflow-hidden" style={{ animation: "fade-in 0.2s ease-out" }}>
+        <div className="fixed bottom-6 right-6 w-80 h-96 bg-off-white rounded-2xl shadow-2xl border border-gray/20 flex flex-col z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray/20 bg-dark-purple">
             <div className="flex items-center gap-2">
               <Bot size={16} className="text-off-white" />
               <span className="text-sm font-semibold text-off-white">Chatme AI</span>
             </div>
-            <button onClick={() => setChatOpen(false)}><X size={16} className="text-off-white/60 hover:text-off-white" /></button>
+            <button onClick={() => setChatOpen(false)} aria-label="Close AI chat"><X size={16} className="text-off-white/60 hover:text-off-white" /></button>
           </div>
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
             {chatHistory.length === 0 && (
@@ -296,7 +329,7 @@ export default function Dashboard() {
                 placeholder="Ask anything..."
                 className="flex-1 bg-transparent text-sm text-dark-purple outline-none placeholder:text-dark-purple/30"
               />
-              <button onClick={handleChatSend} className="p-1 rounded-lg hover:bg-dark-purple/10 transition-colors">
+              <button onClick={handleChatSend} aria-label="Send message" className="p-1 rounded-lg hover:bg-dark-purple/10 transition-colors">
                 <SendHorizonal size={16} className="text-dark-purple/60" />
               </button>
             </div>

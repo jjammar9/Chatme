@@ -40,6 +40,33 @@ function MainContent({ activeNav, onChat, settingsKey }: { activeNav: string; on
   }
 }
 
+function LogoutModal({ open, onClose, onLogout }: { open: boolean; onClose: () => void; onLogout: () => void }) {
+  if (!open) return null
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Logout confirmation"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      onClick={onClose}
+    >
+      <div className="bg-off-white rounded-2xl p-6 w-80 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-dark-purple">Logout</h3>
+          <button onClick={onClose} aria-label="Cancel logout"><X size={18} className="text-dark-purple/50" /></button>
+        </div>
+        <p className="text-sm text-dark-purple/60 mb-6">Are you sure you want to logout?</p>
+        <div className="flex gap-3">
+          <button onClick={onClose} className="flex-1 text-sm font-semibold text-dark-purple bg-light-gray py-2.5 rounded-xl hover:bg-gray/20 transition-colors">Cancel</button>
+          <button onClick={onLogout} className="flex-1 text-sm font-semibold text-off-white bg-rose py-2.5 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5">
+            <LogOut size={14} /> Logout
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [activeNav, setActiveNav] = useState("dashboard")
@@ -76,23 +103,7 @@ function App() {
             messagePanel={<MessagePanel />}
             showMessages={activeNav === "messages"}
           />
-          {showLogout && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowLogout(false)}>
-              <div className="bg-off-white rounded-2xl p-6 w-80 shadow-xl" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-dark-purple">Logout</h3>
-                  <button onClick={() => setShowLogout(false)}><X size={18} className="text-dark-purple/50" /></button>
-                </div>
-                <p className="text-sm text-dark-purple/60 mb-6">Are you sure you want to logout?</p>
-                <div className="flex gap-3">
-                  <button onClick={() => setShowLogout(false)} className="flex-1 text-sm font-semibold text-dark-purple bg-light-gray py-2.5 rounded-xl hover:bg-gray/20 transition-colors">Cancel</button>
-                  <button onClick={handleLogout} className="flex-1 text-sm font-semibold text-off-white bg-rose py-2.5 rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5">
-                    <LogOut size={14} /> Logout
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <LogoutModal open={showLogout} onClose={() => setShowLogout(false)} onLogout={handleLogout} />
         </div>
       )}
     </ToastProvider>

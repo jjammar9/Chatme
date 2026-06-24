@@ -1,4 +1,5 @@
 import { Pin, ExternalLink } from "lucide-react"
+import Avatar from "../ui/Avatar"
 
 const avatars = [
   { name: "Alex", seed: "Alex" },
@@ -22,13 +23,7 @@ const allChats = [
 function AvatarCircle({ seed, online }: { seed: string; online: boolean }) {
   return (
     <div className="relative w-11 h-11 shrink-0">
-      <div className="w-full h-full rounded-lg overflow-hidden bg-light-gray">
-        <img
-          src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${seed}&backgroundColor=eddbda`}
-          alt={seed}
-          className="w-full h-full object-cover"
-        />
-      </div>
+      <Avatar seed={seed} size="md" />
       {online && (
         <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green rounded-full border-2 border-off-white" />
       )}
@@ -39,13 +34,7 @@ function AvatarCircle({ seed, online }: { seed: string; online: boolean }) {
 function ChatItem({ chat }: { chat: { name: string; seed: string; message: string; time: string; unread: number } }) {
   return (
     <div className="flex items-start gap-3 pl-5 pr-1 py-2.5 hover:bg-light-gray/50 cursor-pointer">
-      <div className="w-10 h-10 shrink-0 rounded-lg overflow-hidden bg-light-gray">
-        <img
-          src={`https://api.dicebear.com/9.x/avataaars/svg?seed=${chat.seed}&backgroundColor=eddbda`}
-          alt={chat.name}
-          className="w-full h-full object-cover"
-        />
-      </div>
+      <Avatar seed={chat.seed} alt={chat.name} size="md" />
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline justify-between">
           <span className="text-sm font-bold text-dark-purple truncate">{chat.name}</span>
@@ -82,7 +71,7 @@ export default function MessagePanel() {
     <div className="flex flex-col h-full bg-off-white">
       <div className="flex items-center justify-between pl-5 pr-1 py-6">
         <h2 className="text-lg font-bold text-dark-purple">Messages</h2>
-        <button className="text-dark-purple hover:text-deep-purple transition-colors cursor-pointer">
+        <button className="text-dark-purple hover:text-deep-purple transition-colors cursor-pointer" aria-label="New message">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
             <rect x="0.5" y="0.5" width="23" height="23" rx="3" fill="#d2d2d2" />
             <path d="M12 7v10M7 12h10" stroke="#1b0036" strokeWidth="1.5" strokeLinecap="round" />
@@ -101,6 +90,7 @@ export default function MessagePanel() {
             type="text"
             placeholder="Search or start a message"
             className="w-full h-9 rounded-lg bg-light-gray pl-3 pr-9 text-sm text-dark-purple placeholder:text-dark-purple/40 outline-none"
+            aria-label="Search messages"
           />
           <svg
             width="16"

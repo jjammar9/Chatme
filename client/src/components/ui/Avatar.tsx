@@ -1,7 +1,9 @@
+import { getAvatarUrl } from "../../lib/utils"
+
 type AvatarSize = "sm" | "md" | "lg" | "xl"
 
 interface AvatarProps {
-  src?: string
+  seed?: string
   alt?: string
   size?: AvatarSize
   status?: "online" | "offline" | "away"
@@ -22,7 +24,7 @@ const statusDotStyles: Record<string, string> = {
 }
 
 export default function Avatar({
-  src,
+  seed,
   alt = "",
   size = "md",
   status,
@@ -30,19 +32,21 @@ export default function Avatar({
 }: AvatarProps) {
   return (
     <div className={`relative inline-flex shrink-0 ${className}`}>
-      {src ? (
-        <img
-          src={src}
-          alt={alt}
-          className={`${sizeStyles[size]} rounded-full object-cover bg-light-gray`}
-        />
-      ) : (
-        <div
-          className={`${sizeStyles[size]} rounded-full bg-rose text-deep-purple font-semibold flex items-center justify-center`}
-        >
-          {alt.charAt(0).toUpperCase() || "?"}
-        </div>
-      )}
+      <div
+        className={`${sizeStyles[size]} rounded-lg overflow-hidden bg-light-gray`}
+      >
+        {seed ? (
+          <img
+            src={getAvatarUrl(seed)}
+            alt={alt}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-rose text-deep-purple font-semibold flex items-center justify-center">
+            {alt.charAt(0).toUpperCase() || "?"}
+          </div>
+        )}
+      </div>
       {status && (
         <span
           className={`
