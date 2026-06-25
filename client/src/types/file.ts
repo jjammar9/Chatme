@@ -1,4 +1,5 @@
 export interface FileItem {
+  _id?: string
   id: string
   name: string
   type: "document" | "image" | "video" | "audio" | "link"

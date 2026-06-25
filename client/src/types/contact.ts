@@ -1,4 +1,6 @@
 export interface Contact {
+  _id?: string
+  linkedUserId?: string
   name: string
   seed: string
   email: string
@@ -10,4 +12,15 @@ export interface Contact {
   relationship?: "friend" | "close-friend" | "family" | "worker" | "colleague" | "other"
   website?: string
   socialLinks?: { platform: string; url: string }[]
+}
+
+export interface UserSearchResult {
+  _id: string
+  name: string
+  username: string
+  email: string
+  avatarSeed: string
+  role: string
+  online: boolean
+  createdAt?: string
 }

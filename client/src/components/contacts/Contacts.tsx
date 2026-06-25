@@ -1,6 +1,7 @@
-import { useState } from "react"
-import { Star, MessageCircle, Mail, Search, Plus, X, Users, Globe, Link, MapPin, Phone, Image, ChevronDown, Send } from "lucide-react"
-import type { Contact } from "../../types"
+import { useState, useEffect } from "react"
+import { Star, MessageCircle, Mail, Search, Plus, X, Users, Globe, Link, MapPin, Phone, Image, ChevronDown, Send, UserPlus, Calendar, ArrowLeft } from "lucide-react"
+import type { Contact, UserSearchResult } from "../../types"
+import { contacts as contactsApi, users as usersApi } from "../../lib/api"
 import Avatar from "../ui/Avatar"
 import Badge from "../ui/Badge"
 import Button from "../ui/Button"
@@ -32,31 +33,9 @@ for (const c of communities) {
   }
 }
 
-const allContacts: Contact[] = [
-  { name: "Sarah Johnson", seed: "Sarah", email: "sarah.j@design.co", role: "Lead Designer", online: true, favorite: true, phone: "+1 555-0101", address: "123 Design St, NYC", relationship: "close-friend", website: "https://sarahj.design", socialLinks: [{ platform: "Twitter", url: "https://x.com/sarahj" }, { platform: "Dribbble", url: "https://dribbble.com/sarahj" }] },
-  { name: "Jordan Kim", seed: "Jordan", email: "jordan.k@dev.io", role: "Full-Stack Dev", online: true, favorite: true, phone: "+1 555-0102", relationship: "friend", socialLinks: [{ platform: "GitHub", url: "https://github.com/jordank" }] },
-  { name: "Maya Patel", seed: "Maya", email: "maya.p@backend.dev", role: "Backend Engineer", online: false, favorite: true, phone: "+1 555-0103", address: "456 Oak Ave, SF", relationship: "family", website: "https://mayapatel.dev" },
-  { name: "Taylor Reed", seed: "Taylor", email: "taylor.r@product.org", role: "Product Manager", online: true, favorite: true, phone: "+1 555-0104", relationship: "worker" },
-  { name: "Alex Chen", seed: "Alex", email: "alex.c@ml.dev", role: "ML Engineer", online: false, favorite: true, phone: "+1 555-0105", address: "789 Pine Rd, Seattle", relationship: "colleague", socialLinks: [{ platform: "LinkedIn", url: "https://linkedin.com/in/alexchen" }] },
-  { name: "Emily Davis", seed: "Emily", email: "emily.d@frontend.dev", role: "Frontend Dev", online: true, favorite: true, phone: "+1 555-0106", relationship: "friend", website: "https://emilyd.dev" },
-  { name: "Marcus Lee", seed: "Marcus", email: "marcus.l@data.dev", role: "Data Analyst", online: false, favorite: false, phone: "+1 555-0107", address: "321 Elm St, Austin", relationship: "worker" },
-  { name: "Priya Sharma", seed: "Priya", email: "priya.s@qa.dev", role: "QA Lead", online: true, favorite: false, phone: "+1 555-0108", relationship: "colleague", socialLinks: [{ platform: "Twitter", url: "https://x.com/priyas" }] },
-  { name: "Liam O'Brien", seed: "Liam", email: "liam.o@mobile.dev", role: "iOS Developer", online: true, favorite: false, phone: "+1 555-0109", address: "654 Birch Ln, Portland", relationship: "friend", website: "https://liamob.dev" },
-  { name: "Zoe Williams", seed: "Zoe", email: "zoe.w@creative.co", role: "UX Designer", online: false, favorite: false, phone: "+1 555-0110", relationship: "colleague", socialLinks: [{ platform: "Dribbble", url: "https://dribbble.com/zoew" }] },
-  { name: "Ethan Brown", seed: "Ethan", email: "ethan.b@sysadmin.io", role: "DevOps Engineer", online: true, favorite: false, phone: "+1 555-0111", address: "987 Cedar Ct, Denver", relationship: "worker" },
-  { name: "Chloe Garcia", seed: "Chloe", email: "chloe.g@marketing.co", role: "Marketing Lead", online: false, favorite: false, phone: "+1 555-0112", relationship: "close-friend", website: "https://chloeg.design", socialLinks: [{ platform: "Instagram", url: "https://instagram.com/chloeg" }] },
-  { name: "Ryan Martinez", seed: "Ryan", email: "ryan.m@data.co", role: "Data Scientist", online: true, favorite: false, phone: "+1 555-0113", address: "111 Walnut Ave, Chicago", relationship: "colleague" },
-  { name: "Ava Thompson", seed: "Ava", email: "ava.t@support.io", role: "Customer Success", online: false, favorite: false, phone: "+1 555-0114", relationship: "friend", socialLinks: [{ platform: "LinkedIn", url: "https://linkedin.com/in/avat" }] },
-  { name: "Noah White", seed: "Noah", email: "noah.w@security.dev", role: "Security Engineer", online: true, favorite: false, phone: "+1 555-0115", address: "222 Pine St, Boston", relationship: "worker" },
-  { name: "Isabella King", seed: "Isabella", email: "isabella.k@legal.co", role: "Legal Counsel", online: false, favorite: false, phone: "+1 555-0116", relationship: "family" },
-  { name: "Mason Clark", seed: "Mason", email: "mason.c@finance.io", role: "Finance Manager", online: true, favorite: false, phone: "+1 555-0117", address: "333 Lake Dr, Miami", relationship: "worker" },
-  { name: "Sophia Hall", seed: "Sophia", email: "sophia.h@hr.co", role: "HR Director", online: false, favorite: false, phone: "+1 555-0118", relationship: "colleague", website: "https://sophiah.co" },
-  { name: "Lucas Young", seed: "Lucas", email: "lucas.y@consulting.io", role: "Strategy Consultant", online: true, favorite: false, phone: "+1 555-0119", address: "444 Oak St, Dallas", relationship: "friend", socialLinks: [{ platform: "Twitter", url: "https://x.com/lucasy" }] },
-  { name: "Mia Turner", seed: "Mia", email: "mia.t@health.io", role: "Product Designer", online: false, favorite: false, phone: "+1 555-0120", relationship: "close-friend", website: "https://miaturner.design" },
-]
-
 export default function Contacts({ onChat }: { onChat: () => void }) {
-  const [contacts, setContacts] = useState<Contact[]>(allContacts)
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [showAdd, setShowAdd] = useState(false)
   const [newName, setNewName] = useState("")
@@ -71,39 +50,71 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
   const [favOpen, setFavOpen] = useState(true)
   const [allOpen, setAllOpen] = useState(true)
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
+  const [showFindUsers, setShowFindUsers] = useState(false)
+  const [findQuery, setFindQuery] = useState("")
+  const [findResults, setFindResults] = useState<UserSearchResult[]>([])
+  const [findLoading, setFindLoading] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null)
 
-  const toggleFavorite = (name: string) => {
-    setContacts((prev) => prev.map((c) => (c.name === name ? { ...c, favorite: !c.favorite } : c)))
+  useEffect(() => {
+    contactsApi.list().then((data) => { setContacts(data.contacts); setLoading(false) }).catch(() => setLoading(false))
+  }, [])
+
+  const refresh = () => contactsApi.list().then((data) => setContacts(data.contacts))
+
+  const toggleFavorite = (contact: Contact) => {
+    if (!contact._id) return
+    contactsApi.update(contact._id, { favorite: !contact.favorite }).then(() => refresh())
+  }
+
+  const searchUsers = async () => {
+    if (!findQuery.trim()) return
+    setFindLoading(true)
+    try {
+      const data = await usersApi.search(findQuery)
+      setFindResults(data.users)
+    } catch {
+      setFindResults([])
+    } finally {
+      setFindLoading(false)
+    }
+  }
+
+  const addUserAsContact = (user: UserSearchResult) => {
+    contactsApi.create({
+      name: user.name,
+      seed: user.avatarSeed || user.username,
+      email: user.email,
+      role: "User",
+      online: user.online,
+      favorite: false,
+      linkedUserId: user._id,
+    }).then(() => {
+      refresh()
+      setFindQuery("")
+      setFindResults([])
+      setShowFindUsers(false)
+    })
   }
 
   const addContact = () => {
     if (!newName.trim()) return
     const seed = newSeed.trim() || newName.split(" ")[0]
-    setContacts((prev) => [
-      ...prev,
-      {
-        name: newName.trim(),
-        seed,
-        email: newEmail.trim() || `${seed.toLowerCase()}@email.com`,
-        role: "Contact",
-        online: false,
-        favorite: false,
-        phone: newPhone.trim() || undefined,
-        address: newAddress.trim() || undefined,
-        relationship: newRelationship,
-        website: newWebsite.trim() || undefined,
-        socialLinks: newSocials.filter((s) => s.platform && s.url) || undefined,
-      },
-    ])
-    setNewName("")
-    setNewEmail("")
-    setNewPhone("")
-    setNewAddress("")
-    setNewRelationship(undefined)
-    setNewSeed("")
-    setNewWebsite("")
-    setNewSocials([])
-    setShowAdd(false)
+    contactsApi.create({
+      name: newName.trim(), seed,
+      email: newEmail.trim() || `${seed.toLowerCase()}@email.com`,
+      role: "Contact", online: false, favorite: false,
+      phone: newPhone.trim() || undefined,
+      address: newAddress.trim() || undefined,
+      relationship: newRelationship,
+      website: newWebsite.trim() || undefined,
+      socialLinks: newSocials.filter((s) => s.platform && s.url) || undefined,
+    }).then(() => {
+      refresh()
+      setNewName(""); setNewEmail(""); setNewPhone(""); setNewAddress("")
+      setNewRelationship(undefined); setNewSeed(""); setNewWebsite(""); setNewSocials([])
+      setShowAdd(false)
+    })
   }
 
   const filtered = contacts.filter((c) => {
@@ -123,9 +134,14 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
             <h1 className="text-3xl font-bold text-dark-purple">Contacts</h1>
             <p className="text-base text-dark-purple/50 mt-1">{contacts.length} contacts · {contacts.filter((c) => c.online).length} online</p>
           </div>
-          <Button onClick={() => setShowAdd(true)}>
-            <Plus size={18} /> <span>Add Contact</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" onClick={() => setShowFindUsers(true)}>
+              <UserPlus size={18} /> <span>Find Users</span>
+            </Button>
+            <Button onClick={() => setShowAdd(true)}>
+              <Plus size={18} /> <span>Add Contact</span>
+            </Button>
+          </div>
         </div>
         <div className="relative mb-3">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-purple/40" />
@@ -211,6 +227,88 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
         </div>
       </Modal>
 
+      <Modal open={showFindUsers} onClose={() => { setShowFindUsers(false); setFindQuery(""); setFindResults([]); setSelectedUser(null) }} title={selectedUser ? selectedUser.name : "Find Users"} size="md">
+        {selectedUser ? (
+          <div className="space-y-5">
+            <button onClick={() => setSelectedUser(null)} className="flex items-center gap-1.5 text-xs font-medium text-dark-purple/50 hover:text-dark-purple transition-colors" aria-label="Back to search">
+              <ArrowLeft size="14" /> Back to search
+            </button>
+
+            <div className="flex flex-col items-center py-2">
+              <Avatar seed={selectedUser.avatarSeed || selectedUser.username} size="xl" status={selectedUser.online ? "online" : undefined} />
+              <h2 className="text-lg font-bold text-dark-purple mt-3">{selectedUser.name}</h2>
+              <p className="text-sm text-dark-purple/50">@{selectedUser.username}</p>
+              <div className="flex items-center gap-2 mt-2">
+                <Badge variant="info" size="sm">{selectedUser.role}</Badge>
+                {selectedUser.online && <span className="flex items-center gap-1 text-[10px] font-medium text-green"><span className="w-1.5 h-1.5 rounded-full bg-green" />Online</span>}
+              </div>
+            </div>
+
+            <div className="space-y-3 bg-light-gray rounded-xl p-4">
+              <div className="flex items-center gap-2.5 text-sm text-dark-purple/70">
+                <Mail size="14" className="text-dark-purple/30 shrink-0" />
+                <span>{selectedUser.email}</span>
+              </div>
+              <div className="flex items-center gap-2.5 text-sm text-dark-purple/70">
+                <Calendar size="14" className="text-dark-purple/30 shrink-0" />
+                <span>Joined {new Date(selectedUser.createdAt || Date.now()).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              {contacts.some((c) => c.linkedUserId === selectedUser._id) ? (
+                <Button fullWidth variant="secondary" disabled>Already a contact</Button>
+              ) : (
+                <Button fullWidth onClick={() => addUserAsContact(selectedUser)}>
+                  <UserPlus size="16" /> Add to Contacts
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search size="16" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-dark-purple/40" />
+                <input
+                  value={findQuery}
+                  onChange={(e) => setFindQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && searchUsers()}
+                  placeholder="Search by username, name or email..."
+                  className="w-full bg-light-gray rounded-xl pl-10 pr-4 py-2.5 text-sm text-dark-purple placeholder-dark-purple/40 outline-none focus:ring-2 focus:ring-dark-purple/10"
+                  aria-label="Search users"
+                />
+              </div>
+              <Button onClick={searchUsers} disabled={!findQuery.trim() || findLoading}>
+                {findLoading ? "Searching..." : "Search"}
+              </Button>
+            </div>
+
+            {findResults.length > 0 && (
+              <div className="space-y-2 max-h-72 overflow-y-auto">
+                <p className="text-xs font-semibold text-dark-purple/50">{findResults.length} user{findResults.length !== 1 ? "s" : ""} found</p>
+                {findResults.map((u) => (
+                  <div key={u._id} onClick={() => setSelectedUser(u)} className="flex items-center gap-3 p-3 rounded-xl bg-light-gray hover:bg-light-gray/70 transition-colors cursor-pointer">
+                    <Avatar seed={u.avatarSeed || u.username} size="md" status={u.online ? "online" : undefined} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-dark-purple">{u.name}</p>
+                      <p className="text-xs text-dark-purple/50">@{u.username} · {u.email}</p>
+                    </div>
+                    <Button size="sm" onClick={(e) => { e.stopPropagation(); addUserAsContact(u) }} aria-label={`Add ${u.name} as contact`}>
+                      <UserPlus size="14" /> <span>Add</span>
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {findQuery && !findLoading && findResults.length === 0 && (
+              <p className="text-sm text-dark-purple/50 text-center py-8">No users found. Try a different search.</p>
+            )}
+          </div>
+        )}
+      </Modal>
+
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 px-8 py-6 space-y-5 overflow-y-auto">
           <div className="flex items-center gap-3 text-xs">
@@ -235,7 +333,7 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
               {favOpen && (
                 <div className="space-y-0 bg-off-white rounded-xl border border-gray/20 overflow-hidden">
                   {favorites.map((c) => (
-                    <ContactRow key={c.name} contact={c} onSelect={setSelectedContact} onToggleFavorite={toggleFavorite} onChat={onChat} selected={selectedContact?.name === c.name} />
+                    <ContactRow key={c._id || c.name} contact={c} onSelect={setSelectedContact} onToggleFavorite={toggleFavorite} onChat={onChat} selected={selectedContact?._id === c._id} />
                   ))}
                 </div>
               )}
@@ -252,7 +350,7 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
             {allOpen && (
               <div className="space-y-0 bg-off-white rounded-xl border border-gray/20 overflow-hidden">
                 {others.length > 0 ? others.map((c) => (
-                  <ContactRow key={c.name} contact={c} onSelect={setSelectedContact} onToggleFavorite={toggleFavorite} onChat={onChat} selected={selectedContact?.name === c.name} />
+                  <ContactRow key={c._id || c.name} contact={c} onSelect={setSelectedContact} onToggleFavorite={toggleFavorite} onChat={onChat} selected={selectedContact?._id === c._id} />
                 )) : (
                   <div className="px-5 py-8 text-center text-base text-dark-purple/40">No contacts match your search</div>
                 )}
@@ -405,7 +503,7 @@ function ContactRow({ contact, onSelect, onToggleFavorite, onChat, selected }: {
         <button onClick={onChat} className="p-2 rounded-lg hover:bg-light-gray transition-colors" aria-label="Chat with {contact.name}">
           <MessageCircle size={18} className="text-dark-purple/60" />
         </button>
-        <button onClick={() => onToggleFavorite(contact.name)} className="p-2 rounded-lg hover:bg-light-gray transition-colors" aria-label={contact.favorite ? "Remove from favourites" : "Add to favourites"}>
+        <button onClick={() => onToggleFavorite(contact)} className="p-2 rounded-lg hover:bg-light-gray transition-colors" aria-label={contact.favorite ? "Remove from favourites" : "Add to favourites"}>
           <Star size={18} className={contact.favorite ? "text-dark-purple/50 fill-dark-purple/20" : "text-dark-purple/30"} />
         </button>
       </div>

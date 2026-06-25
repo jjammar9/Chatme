@@ -1,41 +1,11 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Search, Plus, X, FileText, Image, Video, Music, Link as LinkIcon, File, Download, Forward, Clock, CalendarDays, ChevronDown, FolderOpen } from "lucide-react"
 import type { FileItem } from "../../types"
 import { formatTime, formatDate, isSameDay, getAvatarUrl } from "../../lib/utils"
+import { files as filesApi } from "../../lib/api"
 import Avatar from "../ui/Avatar"
 import Button from "../ui/Button"
 import Badge from "../ui/Badge"
-
-const seeds = ["Sarah", "Jordan", "Maya", "Taylor", "Alex", "Emily", "Marcus", "Priya"]
-
-const now = new Date()
-const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-const yesterday = new Date(today)
-yesterday.setDate(yesterday.getDate() - 1)
-const twoDaysAgo = new Date(today)
-twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
-const lastWeek = new Date(today)
-lastWeek.setDate(lastWeek.getDate() - 6)
-const threeDaysAgo = new Date(today)
-threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
-
-const allFiles: FileItem[] = [
-  { id: "1", name: "Q3 Brand Guidelines.pdf", type: "document", size: "2.4 MB", timestamp: new Date(today.getTime() + 2 * 3600000), sender: "Jordan Kim", seed: "Jordan", preview: "https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400&h=300&fit=crop", description: "Complete brand guidelines for Q3 including color palette, typography, and logo usage." },
-  { id: "2", name: "Dashboard Mockup v2.png", type: "image", size: "4.1 MB", timestamp: new Date(today.getTime() + 5 * 3600000), sender: "Maya Patel", seed: "Maya", preview: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=300&fit=crop", description: "Updated dashboard mockup with new analytics widget layout." },
-  { id: "3", name: "Sprint Demo Recording.mp4", type: "video", size: "28 MB", timestamp: new Date(today.getTime() + 8 * 3600000), sender: "Alex Chen", seed: "Alex", preview: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400&h=300&fit=crop", description: "Recording of the sprint demo showcasing the new features." },
-  { id: "4", name: "Team Standup Notes.docx", type: "document", size: "1.2 MB", timestamp: yesterday, sender: "Sarah Johnson", seed: "Sarah", description: "Notes from the daily standup covering progress and blockers." },
-  { id: "5", name: "Product Roadmap Q4.pptx", type: "document", size: "5.7 MB", timestamp: yesterday, sender: "Taylor Reed", seed: "Taylor", description: "Quarterly product roadmap presentation for stakeholders." },
-  { id: "6", name: "Team Photo - Offsite.jpg", type: "image", size: "3.3 MB", timestamp: yesterday, sender: "Emily Davis", seed: "Emily", preview: "https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop", description: "Group photo from the team offsite at Lakeside Retreat." },
-  { id: "7", name: "UI Animation.mov", type: "video", size: "15 MB", timestamp: twoDaysAgo, sender: "Jordan Kim", seed: "Jordan", preview: "https://images.unsplash.com/photo-1559028012-481c04fa702d?w=400&h=300&fit=crop", description: "Animation prototype for the new onboarding flow." },
-  { id: "8", name: "Interview Feedback.pdf", type: "document", size: "0.8 MB", timestamp: twoDaysAgo, sender: "Priya Sharma", seed: "Priya", description: "Feedback forms from the recent candidate interviews." },
-  { id: "9", name: "Podcast Episode 12.mp3", type: "audio", size: "45 MB", timestamp: threeDaysAgo, sender: "Marcus Lee", seed: "Marcus", description: "Internal tech podcast episode covering ML best practices." },
-  { id: "10", name: "API Documentation.html", type: "link", size: "—", timestamp: threeDaysAgo, sender: "Alex Chen", seed: "Alex", preview: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=400&h=300&fit=crop", description: "Link to the internal API documentation portal." },
-  { id: "11", name: "Design System Specs.fig", type: "document", size: "6.2 MB", timestamp: lastWeek, sender: "Maya Patel", seed: "Maya", description: "Figma design system file with all components and variants." },
-  { id: "12", name: "Conference Talk Slides.pdf", type: "document", size: "3.9 MB", timestamp: lastWeek, sender: "Sarah Johnson", seed: "Sarah", description: "Slides from the tech conference presentation." },
-  { id: "13", name: "Background Loop.wav", type: "audio", size: "8.5 MB", timestamp: lastWeek, sender: "Taylor Reed", seed: "Taylor", description: "Background music loop for the product launch video." },
-  { id: "14", name: "Bug Tracker Export.csv", type: "document", size: "0.3 MB", timestamp: lastWeek, sender: "Priya Sharma", seed: "Priya", description: "CSV export of all open bugs from the tracker." },
-  { id: "15", name: "Marketing Assets.zip", type: "document", size: "12 MB", timestamp: lastWeek, sender: "Emily Davis", seed: "Emily", description: "ZIP archive of all marketing materials for the release." },
-]
 
 function getDayLabel(date: Date): string {
   if (isSameDay(date, today)) return "Today"
@@ -88,10 +58,19 @@ function FileSizeBar({ size }: { size: string }) {
 }
 
 export default function Files() {
+  const [allFiles, setAllFiles] = useState<FileItem[]>([])
+  const [loading, setLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState("all")
   const [search, setSearch] = useState("")
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null)
   const [sortNewest, setSortNewest] = useState(true)
+
+  useEffect(() => {
+    filesApi.list().then((data) => {
+      setAllFiles(data.files.map((f: Record<string, string>) => ({ ...f, id: f._id, timestamp: new Date(f.createdAt) })))
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [])
 
   const filtered = allFiles.filter((f) => {
     const matchSearch = f.name.toLowerCase().includes(search.toLowerCase()) || f.sender.toLowerCase().includes(search.toLowerCase())

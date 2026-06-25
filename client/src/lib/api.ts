@@ -1,0 +1,121 @@
+const BASE = "/api"
+
+function headers() {
+  const token = localStorage.getItem("token")
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  }
+}
+
+async function handleResponse(res: Response) {
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error || `Request failed: ${res.status}`)
+  }
+  return res.json()
+}
+
+// Auth
+export const auth = {
+  login: (email: string, password: string) =>
+    fetch(`${BASE}/auth/login`, { method: "POST", headers: headers(), body: JSON.stringify({ email, password }) }).then(handleResponse),
+  register: (name: string, username: string, email: string, password: string) =>
+    fetch(`${BASE}/auth/register`, { method: "POST", headers: headers(), body: JSON.stringify({ name, username, email, password }) }).then(handleResponse),
+  me: () =>
+    fetch(`${BASE}/auth/me`, { headers: headers() }).then(handleResponse),
+}
+
+// Tasks
+export const tasks = {
+  list: () =>
+    fetch(`${BASE}/tasks`, { headers: headers() }).then(handleResponse),
+  create: (data: Record<string, unknown>) =>
+    fetch(`${BASE}/tasks`, { method: "POST", headers: headers(), body: JSON.stringify(data) }).then(handleResponse),
+  update: (id: string, data: Record<string, unknown>) =>
+    fetch(`${BASE}/tasks/${id}`, { method: "PUT", headers: headers(), body: JSON.stringify(data) }).then(handleResponse),
+  remove: (id: string) =>
+    fetch(`${BASE}/tasks/${id}`, { method: "DELETE", headers: headers() }).then(handleResponse),
+}
+
+// Calendar
+export const calendar = {
+  list: (month?: number, year?: number) => {
+    const params = new URLSearchParams()
+    if (month !== undefined) params.set("month", String(month))
+    if (year !== undefined) params.set("year", String(year))
+    return fetch(`${BASE}/calendar?${params}`, { headers: headers() }).then(handleResponse)
+  },
+  create: (data: Record<string, unknown>) =>
+    fetch(`${BASE}/calendar`, { method: "POST", headers: headers(), body: JSON.stringify(data) }).then(handleResponse),
+  update: (id: string, data: Record<string, unknown>) =>
+    fetch(`${BASE}/calendar/${id}`, { method: "PUT", headers: headers(), body: JSON.stringify(data) }).then(handleResponse),
+  remove: (id: string) =>
+    fetch(`${BASE}/calendar/${id}`, { method: "DELETE", headers: headers() }).then(handleResponse),
+}
+
+// Contacts
+export const contacts = {
+  list: () =>
+    fetch(`${BASE}/contacts`, { headers: headers() }).then(handleResponse),
+  create: (data: Record<string, unknown>) =>
+    fetch(`${BASE}/contacts`, { method: "POST", headers: headers(), body: JSON.stringify(data) }).then(handleResponse),
+  update: (id: string, data: Record<string, unknown>) =>
+    fetch(`${BASE}/contacts/${id}`, { method: "PUT", headers: headers(), body: JSON.stringify(data) }).then(handleResponse),
+  remove: (id: string) =>
+    fetch(`${BASE}/contacts/${id}`, { method: "DELETE", headers: headers() }).then(handleResponse),
+}
+
+// Files
+export const files = {
+  list: () =>
+    fetch(`${BASE}/files`, { headers: headers() }).then(handleResponse),
+  create: (data: Record<string, unknown>) =>
+    fetch(`${BASE}/files`, { method: "POST", headers: headers(), body: JSON.stringify(data) }).then(handleResponse),
+  update: (id: string, data: Record<string, unknown>) =>
+    fetch(`${BASE}/files/${id}`, { method: "PUT", headers: headers(), body: JSON.stringify(data) }).then(handleResponse),
+  remove: (id: string) =>
+    fetch(`${BASE}/files/${id}`, { method: "DELETE", headers: headers() }).then(handleResponse),
+}
+
+// Users
+export const users = {
+  search: (q: string) =>
+    fetch(`${BASE}/users/search?q=${encodeURIComponent(q)}`, { headers: headers() }).then(handleResponse),
+  byId: (id: string) =>
+    fetch(`${BASE}/users/by-id/${id}`, { headers: headers() }).then(handleResponse),
+}
+
+// Friend Requests
+export const friendRequests = {
+  send: (receiverId: string) =>
+    fetch(`${BASE}/friend-requests`, { method: "POST", headers: headers(), body: JSON.stringify({ receiverId }) }).then(handleResponse),
+  list: () =>
+    fetch(`${BASE}/friend-requests`, { headers: headers() }).then(handleResponse),
+  accept: (id: string) =>
+    fetch(`${BASE}/friend-requests/${id}/accept`, { method: "PUT", headers: headers() }).then(handleResponse),
+  decline: (id: string) =>
+    fetch(`${BASE}/friend-requests/${id}/decline`, { method: "PUT", headers: headers() }).then(handleResponse),
+}
+
+// Notifications
+export const notifications = {
+  list: () =>
+    fetch(`${BASE}/notifications`, { headers: headers() }).then(handleResponse),
+  markRead: (id: string) =>
+    fetch(`${BASE}/notifications/${id}/read`, { method: "PUT", headers: headers() }).then(handleResponse),
+  markAllRead: () =>
+    fetch(`${BASE}/notifications/read-all`, { method: "PUT", headers: headers() }).then(handleResponse),
+}
+
+// Conversations
+export const conversations = {
+  list: () =>
+    fetch(`${BASE}/conversations`, { headers: headers() }).then(handleResponse),
+  create: (data: Record<string, unknown>) =>
+    fetch(`${BASE}/conversations`, { method: "POST", headers: headers(), body: JSON.stringify(data) }).then(handleResponse),
+  messages: (id: string) =>
+    fetch(`${BASE}/conversations/${id}/messages`, { headers: headers() }).then(handleResponse),
+  sendMessage: (id: string, data: Record<string, unknown>) =>
+    fetch(`${BASE}/conversations/${id}/messages`, { method: "POST", headers: headers(), body: JSON.stringify(data) }).then(handleResponse),
+}

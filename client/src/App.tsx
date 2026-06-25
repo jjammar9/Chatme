@@ -14,11 +14,12 @@ import Files from "./components/files/Files"
 import Tasks from "./components/tasks/Tasks"
 import Settings from "./components/settings/Settings"
 import Auth from "./components/auth/Auth"
+import UserProfile from "./components/profile/UserProfile"
 
-function MainContent({ activeNav, onChat, settingsKey }: { activeNav: string; onChat: () => void; settingsKey: number }) {
+function MainContent({ activeNav, onChat, settingsKey, onViewProfile }: { activeNav: string; onChat: () => void; settingsKey: number; onViewProfile: (id: string) => void }) {
   switch (activeNav) {
     case "dashboard":
-      return <Dashboard />
+      return <Dashboard onViewProfile={onViewProfile} />
     case "communities":
       return <Communities />
     case "contacts":
@@ -72,6 +73,7 @@ function App() {
   const [activeNav, setActiveNav] = useState("dashboard")
   const [settingsKey, setSettingsKey] = useState(0)
   const [showLogout, setShowLogout] = useState(false)
+  const [viewProfileUserId, setViewProfileUserId] = useState<string | null>(null)
 
   const handleLogin = () => {
     setIsLoggedIn(true)
@@ -105,11 +107,21 @@ function App() {
       <ToastProvider>
       {!isLoggedIn ? (
         <Auth onLogin={handleLogin} />
+      ) : viewProfileUserId ? (
+        <div style={{ animation: "fade-in 0.2s ease-out" }} className="h-full">
+          <AppLayout
+            sidebar={<Sidebar activeKey={activeNav} onNavChange={(key) => { setViewProfileUserId(null); handleNavChange(key) }} onViewProfile={setViewProfileUserId} />}
+            mainContent={<UserProfile userId={viewProfileUserId} onBack={() => setViewProfileUserId(null)} />}
+            chatList={null}
+            messagePanel={null}
+            showMessages={false}
+          />
+        </div>
       ) : (
         <div style={{ animation: "fade-in 0.4s ease-out" }}>
           <AppLayout
-            sidebar={<Sidebar activeKey={activeNav} onNavChange={handleNavChange} />}
-            mainContent={<MainContent activeNav={activeNav} onChat={() => setActiveNav("messages")} settingsKey={settingsKey} />}
+            sidebar={<Sidebar activeKey={activeNav} onNavChange={handleNavChange} onViewProfile={setViewProfileUserId} />}
+            mainContent={<MainContent activeNav={activeNav} onChat={() => setActiveNav("messages")} settingsKey={settingsKey} onViewProfile={setViewProfileUserId} />}
             chatList={<ChatList />}
             messagePanel={<MessagePanel />}
             showMessages={activeNav === "messages"}

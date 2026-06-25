@@ -1,7 +1,8 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { CheckCheck, Plus, X, Circle, CheckCircle, CalendarDays, Flag, Trash2, Edit3, ArrowLeft, ChevronDown, ListTodo, Search } from "lucide-react"
 import type { Task } from "../../types"
 import { formatTime, formatDate, isSameDay } from "../../lib/utils"
+import { tasks as tasksApi } from "../../lib/api"
 import Avatar from "../ui/Avatar"
 import Badge from "../ui/Badge"
 import Button from "../ui/Button"
@@ -10,30 +11,6 @@ import Modal from "../ui/Modal"
 const now = new Date()
 const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1)
-const day3 = new Date(today); day3.setDate(day3.getDate() + 3)
-const day5 = new Date(today); day5.setDate(day5.getDate() + 5)
-const day7 = new Date(today); day7.setDate(day7.getDate() + 7)
-const day10 = new Date(today); day10.setDate(day10.getDate() + 10)
-const day14 = new Date(today); day14.setDate(day14.getDate() + 14)
-const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1)
-const lastWeek = new Date(today); lastWeek.setDate(lastWeek.getDate() - 7)
-
-function h(hour: number, min = 0) { const d = new Date(); d.setHours(hour, min, 0, 0); return d }
-
-const initialTasks: Task[] = [
-  { id: "1", title: "Finalize Q3 roadmap presentation", description: "Compile all quarterly goals, milestones, and resource allocation for the Q3 roadmap deck.", dueDate: today, priority: "urgent", status: "todo", assignee: "Sarah Johnson", seed: "Sarah", category: "Work", subtasks: [{ title: "Collect team goals", done: true }, { title: "Design slides", done: false }, { title: "Review with stakeholders", done: false }], comments: [{ author: "Jordan Kim", text: "Let me know if you need the engineering timeline.", timestamp: h(10) }] },
-  { id: "2", title: "Review design system components", description: "Audit existing components in Figma and flag inconsistencies before the sprint.", dueDate: today, priority: "high", status: "todo", assignee: "Maya Patel", seed: "Maya", category: "Design", subtasks: [{ title: "Check button variants", done: true }, { title: "Review form inputs", done: false }], comments: [] },
-  { id: "3", title: "Push API documentation update", description: "Update the API docs with the new authentication endpoints.", dueDate: tomorrow, priority: "medium", status: "todo", assignee: "Alex Chen", seed: "Alex", category: "Engineering", subtasks: [], comments: [{ author: "Maya Patel", text: "I can review the docs once you push them.", timestamp: h(14) }] },
-  { id: "4", title: "Prep sprint demo walkthrough", description: "Outline the key features to demo and assign speaking parts.", dueDate: tomorrow, priority: "high", status: "todo", assignee: "Taylor Reed", seed: "Taylor", category: "Product", subtasks: [{ title: "Write script outline", done: true }, { title: "Assign speakers", done: false }], comments: [] },
-  { id: "5", title: "Update user onboarding flow", description: "Simplify the onboarding steps based on user feedback from last month.", dueDate: day3, priority: "medium", status: "todo", assignee: "Emily Davis", seed: "Emily", category: "Design", subtasks: [{ title: "Wireframe new flow", done: false }, { title: "User test", done: false }], comments: [] },
-  { id: "6", title: "Backend performance audit", description: "Profile slow endpoints and optimize database queries.", dueDate: day5, priority: "high", status: "todo", assignee: "Marcus Lee", seed: "Marcus", category: "Engineering", subtasks: [], comments: [] },
-  { id: "7", title: "Write test cases for checkout", description: "Cover edge cases for the new checkout flow.", dueDate: day7, priority: "medium", status: "todo", assignee: "Priya Sharma", seed: "Priya", category: "QA", subtasks: [{ title: "Happy path tests", done: true }, { title: "Error state tests", done: false }], comments: [] },
-  { id: "8", title: "Plan team offsite activities", description: "Coordinate activities, catering, and transport for the offsite.", dueDate: day10, priority: "low", status: "todo", assignee: "Sarah Johnson", seed: "Sarah", category: "Events", subtasks: [], comments: [{ author: "Taylor Reed", text: "I can help with the catering list.", timestamp: h(9) }] },
-  { id: "9", title: "Update employee handbook", description: "Add new remote work policies and benefits section.", dueDate: day14, priority: "low", status: "todo", assignee: "Jordan Kim", seed: "Jordan", category: "HR", subtasks: [], comments: [] },
-  { id: "10", title: "Migrate legacy database", description: "Move remaining customer data from the old schema.", dueDate: today, priority: "urgent", status: "done", assignee: "Alex Chen", seed: "Alex", category: "Engineering", subtasks: [{ title: "Backup data", done: true }, { title: "Run migration script", done: true }, { title: "Verify integrity", done: true }], comments: [] },
-  { id: "11", title: "Redesign notifications panel", description: "Update the notifications UI to support grouping and read state.", dueDate: yesterday, priority: "high", status: "todo", assignee: "Maya Patel", seed: "Maya", category: "Design", subtasks: [{ title: "Mocks", done: true }, { title: "Handoff to dev", done: false }], comments: [] },
-  { id: "12", title: "Fix login redirect bug", description: "Users are not being redirected after SSO login on mobile.", dueDate: lastWeek, priority: "urgent", status: "todo", assignee: "Emily Davis", seed: "Emily", category: "Engineering", subtasks: [], comments: [] },
-]
 
 const categories = ["All", "Work", "Design", "Engineering", "Product", "QA", "Events", "HR"]
 const priorityConfig = {
@@ -69,7 +46,8 @@ function getGroupKey(date: Date): { label: string; order: number } {
 }
 
 export default function Tasks() {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks)
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState("all")
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
@@ -82,9 +60,20 @@ export default function Tasks() {
   const [addCategory, setAddCategory] = useState("Work")
   const [editingId, setEditingId] = useState<string | null>(null)
 
+  useEffect(() => {
+    tasksApi.list().then((data) => { setTasks(data.tasks.map((t: Record<string, string>) => ({ ...t, dueDate: new Date(t.dueDate) }))); setLoading(false) }).catch(() => setLoading(false))
+  }, [])
+
+  const refresh = () => tasksApi.list().then((data) => setTasks(data.tasks.map((t: Record<string, string>) => ({ ...t, dueDate: new Date(t.dueDate) }))))
+
   const toggleDone = (id: string) => {
-    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, status: t.status === "done" ? "todo" : "done" } : t))
-    setSelectedTask((prev) => prev && prev.id === id ? { ...prev, status: prev.status === "done" ? "todo" : "done" } : prev)
+    const t = tasks.find((task) => task.id === id)
+    if (!t) return
+    const newStatus = t.status === "done" ? "todo" : "done"
+    tasksApi.update(id, { status: newStatus }).then(() => {
+      setTasks((prev) => prev.map((task) => task.id === id ? { ...task, status: newStatus } : task))
+      setSelectedTask((prev) => prev && prev.id === id ? { ...prev, status: newStatus } : prev)
+    })
   }
 
   const toggleSubtask = (taskId: string, idx: number) => {
@@ -95,18 +84,21 @@ export default function Tasks() {
   const addTask = () => {
     if (!addTitle.trim()) return
     const seed = addAssignee.split(" ")[0]
-    const newTask: Task = {
-      id: String(Date.now()), title: addTitle.trim(), description: addDesc.trim(),
-      dueDate: selectedTask?.dueDate ?? today, priority: addPriority, status: "todo",
-      assignee: addAssignee, seed, category: addCategory, subtasks: [], comments: [],
+    const newTask = {
+      title: addTitle.trim(), description: addDesc.trim(),
+      dueDate: selectedTask?.dueDate ?? today, priority: addPriority,
+      assignee: addAssignee, seed, category: addCategory,
     }
-    setTasks((prev) => [...prev, newTask])
-    setAddTitle(""); setAddDesc(""); setShowAdd(false)
+    tasksApi.create(newTask as unknown as Record<string, unknown>).then(() => {
+      refresh(); setAddTitle(""); setAddDesc(""); setShowAdd(false)
+    })
   }
 
   const deleteTask = (id: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== id))
-    if (selectedTask?.id === id) setSelectedTask(null)
+    tasksApi.remove(id).then(() => {
+      setTasks((prev) => prev.filter((t) => t.id !== id))
+      if (selectedTask?.id === id) setSelectedTask(null)
+    })
   }
 
   const filtered = tasks.filter((t) => {

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Mail, Lock, User, Eye, EyeOff, AlertCircle } from "lucide-react"
+import { Mail, Lock, User, AtSign, Eye, EyeOff, AlertCircle } from "lucide-react"
 
 const API = "/api/auth"
 
@@ -7,6 +7,7 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
   const [mode, setMode] = useState<"login" | "register">("login")
   const [showPw, setShowPw] = useState(false)
   const [name, setName] = useState("")
+  const [username, setUsername] = useState("")
   const [email, setEmail] = useState("demo@chatme.io")
   const [password, setPassword] = useState("demo123")
   const [loading, setLoading] = useState(false)
@@ -18,7 +19,7 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
     setLoading(true)
     try {
       const body = mode === "register"
-        ? { name, email, password }
+        ? { name, username, email, password }
         : { email, password }
       const res = await fetch(`${API}/${mode}`, {
         method: "POST",
@@ -111,7 +112,7 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
               Sign In
             </button>
             <button
-              onClick={() => { setMode("register"); setEmail(""); setPassword(""); setError("") }}
+              onClick={() => { setMode("register"); setName(""); setUsername(""); setEmail(""); setPassword(""); setError("") }}
               className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-all ${mode === "register" ? "bg-off-white text-dark-purple shadow-sm" : "text-off-white/50 hover:text-off-white"}`}
             >
               Register
@@ -125,6 +126,16 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
                 <input
                   value={name} onChange={(e) => setName(e.target.value)}
                   placeholder="Full name"
+                  className="w-full bg-transparent border border-off-white/15 text-off-white text-sm pl-10 pr-3.5 py-3 rounded-xl outline-none focus:border-off-white/40 transition-colors placeholder:text-off-white/25"
+                />
+              </div>
+            )}
+            {mode === "register" && (
+              <div className="relative">
+                <AtSign size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-off-white/30" />
+                <input
+                  value={username} onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Username"
                   className="w-full bg-transparent border border-off-white/15 text-off-white text-sm pl-10 pr-3.5 py-3 rounded-xl outline-none focus:border-off-white/40 transition-colors placeholder:text-off-white/25"
                 />
               </div>

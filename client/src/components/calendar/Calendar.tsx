@@ -1,29 +1,13 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Search, ChevronLeft, ChevronRight, Plus, CalendarDays, X, MapPin, Clock, Users, ArrowLeft, Trash2, Edit3, Star, Gift, Heart } from "lucide-react"
 import type { CalendarEvent } from "../../types"
+import { calendar as calendarApi } from "../../lib/api"
 import Avatar from "../ui/Avatar"
 import Badge from "../ui/Badge"
 import Button from "../ui/Button"
 import Modal from "../ui/Modal"
 
 const seeds = ["Sarah", "Jordan", "Maya", "Taylor", "Alex", "Emily", "Marcus", "Priya"]
-
-const initialEvents: CalendarEvent[] = [
-  { date: 23, month: 5, year: 2026, title: "Project Squad standup", time: "9:00 AM", seed: "Sarah", status: "confirmed", location: "Conference Room A, 3rd Floor", description: "Daily standup to discuss progress, blockers, and next steps for the project.", attendees: ["Jordan", "Alex", "Maya"] },
-  { date: 23, month: 5, year: 2026, title: "Design review w/ Jordan", time: "11:30 AM", seed: "Jordan", status: "confirmed", location: "Design Lab, Building B", description: "Review the new UI mockups for the dashboard redesign.", attendees: ["Maya"] },
-  { date: 24, month: 5, year: 2026, title: "Lunch w/ Sarah", time: "12:00 PM", seed: "Sarah", status: "confirmed", location: "Blue Bottle Coffee, Downtown", description: "Catch up over lunch and brainstorm ideas for the next sprint.", attendees: [] },
-  { date: 24, month: 5, year: 2026, title: "Backend sync — Maya", time: "3:00 PM", seed: "Maya", status: "tentative", location: "Zoom", description: "Sync on the API architecture and database schema changes.", attendees: ["Alex"] },
-  { date: 25, month: 5, year: 2026, title: "ML sprint review", time: "10:00 AM", seed: "Alex", status: "confirmed", location: "Meeting Room 2, HQ", description: "Review the latest ML model performance and discuss deployment timeline.", attendees: ["Maya", "Emily"] },
-  { date: 26, month: 5, year: 2026, title: "QA walkthrough — Priya", time: "1:00 PM", seed: "Priya", status: "confirmed", location: "Testing Lab, 2nd Floor", description: "Walkthrough of the new test suite and QA pipeline improvements.", attendees: ["Emily"] },
-  { date: 27, month: 5, year: 2026, title: "Product roadmap session", time: "9:30 AM", seed: "Taylor", status: "confirmed", location: "Board Room, 5th Floor", description: "Quarterly roadmap planning.", attendees: ["Sarah", "Jordan", "Maya"] },
-  { date: 27, month: 5, year: 2026, title: "Data review — Marcus", time: "2:00 PM", seed: "Marcus", status: "cancelled", location: "Data Lab, Bldg C", description: "Review analytics dashboard performance.", attendees: ["Priya"] },
-  { date: 30, month: 5, year: 2026, title: "Design critique", time: "4:00 PM", seed: "Taylor", status: "tentative", location: "Design Lab, Building B", description: "Open design critique session.", attendees: ["Jordan", "Sarah"] },
-  { date: 2, month: 6, year: 2026, title: "Sprint planning", time: "10:00 AM", seed: "Emily", status: "confirmed", location: "Conference Room A", description: "Plan the next sprint.", attendees: ["Alex", "Maya", "Jordan"] },
-  { date: 4, month: 6, year: 2026, title: "Team offsite", time: "All day", seed: "Jordan", status: "confirmed", location: "Lakeside Retreat Center", description: "Full-day team building and strategy session.", attendees: ["Sarah", "Alex", "Maya", "Taylor", "Priya", "Emily", "Marcus"] },
-  { date: 5, month: 6, year: 2026, title: "Sarah's Birthday 🎂", time: "6:00 PM", seed: "Sarah", status: "confirmed", location: "Olive Garden, Downtown", description: "Birthday dinner for Sarah!", attendees: ["Jordan", "Maya", "Taylor"] },
-  { date: 8, month: 6, year: 2026, title: "Family Dinner", time: "7:00 PM", seed: "Jordan", status: "confirmed", location: "Mom's House", description: "Weekly family dinner.", attendees: ["Sarah"] },
-  { date: 15, month: 6, year: 2026, title: "Family BBQ", time: "2:00 PM", seed: "Jordan", status: "tentative", location: "Backyard", description: "Summer BBQ with the whole family.", attendees: ["Sarah", "Emily"] },
-]
 
 const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -35,7 +19,8 @@ function todayDate() {
 
 export default function Calendar() {
   const today = todayDate()
-  const [allEvents, setAllEvents] = useState<CalendarEvent[]>(initialEvents)
+  const [allEvents, setAllEvents] = useState<CalendarEvent[]>([])
+  const [loading, setLoading] = useState(true)
   const [viewMonth, setViewMonth] = useState(today.month)
   const [viewYear, setViewYear] = useState(today.year)
   const [selected, setSelected] = useState<{ date: number; month: number; year: number }>(today)
@@ -47,6 +32,10 @@ export default function Calendar() {
   const [newTime, setNewTime] = useState("")
   const [newSeed, setNewSeed] = useState(seeds[0])
   const [newStatus, setNewStatus] = useState<"confirmed" | "tentative" | "cancelled">("confirmed")
+
+  useEffect(() => {
+    calendarApi.list(viewMonth, viewYear).then((data) => { setAllEvents(data.events); setLoading(false) }).catch(() => setLoading(false))
+  }, [viewMonth, viewYear])
 
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
   const firstDay = new Date(viewYear, viewMonth, 1).getDay()
@@ -70,15 +59,18 @@ export default function Calendar() {
 
   const addEvent = () => {
     if (!newTitle.trim()) return
-    setAllEvents((prev) => [...prev, { date: selected.date, month: selected.month, year: selected.year, title: newTitle.trim(), time: newTime || "All day", seed: newSeed, status: newStatus, location: "", description: "", attendees: [] }])
-    setNewTitle("")
-    setNewTime("")
-    setShowAdd(false)
+    calendarApi.create({ date: selected.date, month: selected.month, year: selected.year, title: newTitle.trim(), time: newTime || "All day", seed: newSeed, status: newStatus }).then(() => {
+      calendarApi.list(viewMonth, viewYear).then((data) => setAllEvents(data.events))
+      setNewTitle(""); setNewTime(""); setShowAdd(false)
+    })
   }
 
   const deleteEvent = (e: CalendarEvent) => {
-    setAllEvents((prev) => prev.filter((ev) => ev !== e))
-    setDetailEvent(null)
+    if (!e._id) { setAllEvents((prev) => prev.filter((ev) => ev !== e)); setDetailEvent(null); return }
+    calendarApi.remove(e._id).then(() => {
+      setAllEvents((prev) => prev.filter((ev) => ev._id !== e._id))
+      setDetailEvent(null)
+    })
   }
 
   const query = search.toLowerCase().trim()

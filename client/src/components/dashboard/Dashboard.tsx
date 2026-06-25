@@ -1,34 +1,15 @@
 import { useState, useEffect, useRef } from "react"
 import { MessageSquare, Users, FileText, UserPlus, Send, Camera, MapPin, Calendar, ClipboardList, Search, Clock, Sparkles, X, Bot, SendHorizonal } from "lucide-react"
-import { dashboardStats, mockTasks, mockContacts, mockCommunities } from "../../data/mock"
+import { mockCommunities } from "../../data/mock"
+import { tasks as tasksApi, contacts as contactsApi, users as usersApi } from "../../lib/api"
 import { useToast } from "../../context/ToastContext"
 import Avatar from "../ui/Avatar"
 import { getAvatarUrl, formatTime } from "../../lib/utils"
+import type { Task, UserSearchResult } from "../../types"
 
-const activities = [
-  { user: "Sarah Johnson", action: "reacted 👍 to your message", time: "2 min ago", seed: "Sarah" },
-  { user: "Maya Patel", action: "sent a photo in Project Squad", time: "15 min ago", seed: "Maya" },
-  { user: "Jordan Kim", action: "uploaded design-mockup.png", time: "1h ago", seed: "Jordan" },
-  { user: "Taylor Reed", action: "mentioned you in the group", time: "2h ago", seed: "Taylor" },
-  { user: "Alex Chen", action: "shared a file sprint-plan.pdf", time: "3h ago", seed: "Alex" },
-]
+const activities: { user: string; action: string; time: string; seed: string }[] = []
 
-const frequent = [
-  { name: "Sarah", seed: "Sarah", online: true },
-  { name: "Maya", seed: "Maya", online: true },
-  { name: "Jordan", seed: "Jordan", online: false },
-  { name: "Taylor", seed: "Taylor", online: true },
-  { name: "Alex", seed: "Alex", online: false },
-  { name: "Emily", seed: "Emily", online: true },
-]
-
-const allSearchData = [
-  ...mockTasks.map((t) => ({ label: t.title, category: "Task", seed: t.seed })),
-  ...mockContacts.map((c) => ({ label: c.name, category: "Contact", seed: c.seed })),
-  ...mockCommunities.map((c) => ({ label: c.name, category: "Group", seed: c.seeds[0] })),
-]
-
-function answerQuery(msg: string): string {
+function answerQuery(msg: string, tasks: Task[], contacts: { name: string; online: boolean; favorite: boolean; role: string; seed: string }[]): string {
   const q = msg.toLowerCase()
 
   if (q.includes("hello") || q.includes("hi ") || q === "hi" || q.includes("hey")) {
@@ -36,41 +17,41 @@ function answerQuery(msg: string): string {
   }
 
   if (q.includes("task") || q.includes("todo") || q.includes("to do") || q.includes("due")) {
-    const today = new Date()
-    const todayStr = today.toDateString()
-    const dueToday = mockTasks.filter((t) => t.dueDate.toDateString() === todayStr && t.status === "todo")
-    const totalTodo = mockTasks.filter((t) => t.status === "todo").length
-    const done = mockTasks.filter((t) => t.status === "done").length
+    const d = new Date()
+    const todayStr = d.toDateString()
+    const dueToday = tasks.filter((t) => new Date(t.dueDate).toDateString() === todayStr && t.status === "todo")
+    const totalTodo = tasks.filter((t) => t.status === "todo").length
+    const done = tasks.filter((t) => t.status === "done").length
     if (dueToday.length > 0) {
       const list = dueToday.map((t) => `• ${t.title} (${t.priority})`).join("\n")
       return `You have ${totalTodo} unfinished tasks (${done} done). ${dueToday.length} due today:\n${list}`
     }
     if (q.includes("all") || q.includes("everything")) {
-      const urgent = mockTasks.filter((t) => t.priority === "urgent" && t.status === "todo")
-      return `All tasks: ${mockTasks.length} total, ${totalTodo} to do, ${done} done. ${urgent.length > 0 ? `Urgent: ${urgent.map((t) => t.title).join(", ")}` : ""}`
+      const urgent = tasks.filter((t) => t.priority === "urgent" && t.status === "todo")
+      return `All tasks: ${tasks.length} total, ${totalTodo} to do, ${done} done. ${urgent.length > 0 ? `Urgent: ${urgent.map((t) => t.title).join(", ")}` : ""}`
     }
     return `You have ${totalTodo} unfinished tasks and ${done} completed. Try "what's due today?" for more detail.`
   }
 
   if (q.includes("contact") || q.includes("people") || q.includes("who")) {
-    const online = mockContacts.filter((c) => c.online)
-    const favs = mockContacts.filter((c) => c.favorite)
-    const names = mockContacts.map((c) => c.name).join(", ")
-    return `You have ${mockContacts.length} contacts. ${online.length} currently online: ${online.map((c) => c.name).join(", ")}. Favorites: ${favs.map((c) => c.name).join(", ")}.`
+    const online = contacts.filter((c) => c.online)
+    const favs = contacts.filter((c) => c.favorite)
+    return `You have ${contacts.length} contacts. ${online.length} currently online: ${online.map((c) => c.name).join(", ")}. Favorites: ${favs.map((c) => c.name).join(", ")}.`
   }
 
   if (q.includes("group") || q.includes("community") || q.includes("channel")) {
-    const mostActive = mockCommunities.reduce((a, b) => (a.online > b.online ? a : b))
-    return `You're in ${mockCommunities.length} groups. Most active: "${mostActive.name}" (${mostActive.online}/${mostActive.members} online). Total members across all groups: ${mockCommunities.reduce((s, c) => s + c.members, 0)}.`
+    const mocks = mockCommunities
+    const mostActive = mocks.reduce((a, b) => (a.online > b.online ? a : b))
+    return `You're in ${mocks.length} groups. Most active: "${mostActive.name}" (${mostActive.online}/${mostActive.members} online). Total members: ${mocks.reduce((s, c) => s + c.members, 0)}.`
   }
 
   if (q.includes("file") || q.includes("document") || q.includes("upload")) {
     return `Files are in the Files tab. You can filter by Documents, Images, Videos, Audio, or Links.`
   }
 
-  const taskMatch = mockTasks.find((t) => t.title.toLowerCase().includes(q))
-  if (taskMatch) return `Found task "${taskMatch.title}" — ${taskMatch.status === "done" ? "completed" : taskMatch.priority + " priority"}, due ${taskMatch.dueDate.toDateString()}`
-  const contactMatch = mockContacts.find((c) => c.name.toLowerCase().includes(q))
+  const taskMatch = tasks.find((t) => t.title.toLowerCase().includes(q))
+  if (taskMatch) return `Found task "${taskMatch.title}" — ${taskMatch.status === "done" ? "completed" : taskMatch.priority + " priority"}`
+  const contactMatch = contacts.find((c) => c.name.toLowerCase().includes(q))
   if (contactMatch) return `Found contact "${contactMatch.name}" — ${contactMatch.online ? "online" : "offline"}, ${contactMatch.role}`
   const groupMatch = mockCommunities.find((c) => c.name.toLowerCase().includes(q))
   if (groupMatch) return `Found group "${groupMatch.name}" — ${groupMatch.online}/${groupMatch.members} online, tags: ${groupMatch.tags.join(", ")}`
@@ -82,7 +63,7 @@ function answerQuery(msg: string): string {
 • "Search [name]" — find something specific`
 }
 
-export default function Dashboard() {
+export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: string) => void }) {
   const { toast } = useToast()
   const [now, setNow] = useState(new Date())
   const [searchQuery, setSearchQuery] = useState("")
@@ -90,25 +71,68 @@ export default function Dashboard() {
   const [chatOpen, setChatOpen] = useState(false)
   const [chatMsg, setChatMsg] = useState("")
   const [chatHistory, setChatHistory] = useState<{ role: "user" | "bot"; text: string }[]>([])
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [contacts, setContacts] = useState<{ name: string; online: boolean; favorite: boolean; role: string; seed: string }[]>([])
+  const [userResults, setUserResults] = useState<UserSearchResult[]>([])
+
+  useEffect(() => {
+    tasksApi.list().then((data) => setTasks(data.tasks.map((t: Record<string, string>) => ({ ...t, dueDate: new Date(t.dueDate) })))).catch(() => {})
+    contactsApi.list().then((data) => setContacts(data.contacts)).catch(() => {})
+  }, [])
 
   const welcomeShown = useRef(false)
   useEffect(() => { if (!welcomeShown.current) { welcomeShown.current = true; toast("Welcome to Chatme", "success") } }, [])
   useEffect(() => { const id = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(id) }, [])
 
+  const searchTimeout = useRef<ReturnType<typeof setTimeout>>()
+  useEffect(() => {
+    clearTimeout(searchTimeout.current)
+    if (!searchQuery.trim()) { setUserResults([]); return }
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const data = await usersApi.search(searchQuery)
+        setUserResults(data.users)
+      } catch { setUserResults([]) }
+    }, 300)
+    return () => clearTimeout(searchTimeout.current)
+  }, [searchQuery])
+
   const hour = now.getHours()
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"
+  const userName = JSON.parse(localStorage.getItem("user") || "{}").name || "User"
+
+  const allSearchData = [
+    ...tasks.map((t) => ({ label: t.title, category: "Task", seed: t.seed })),
+    ...contacts.map((c) => ({ label: c.name, category: "Contact", seed: c.seed })),
+    ...mockCommunities.map((c) => ({ label: c.name, category: "Group", seed: c.seeds[0] })),
+  ]
 
   const filteredSearch = searchQuery.trim()
     ? allSearchData.filter((item) => item.label.toLowerCase().includes(searchQuery.toLowerCase()))
     : []
 
   const stats = [
-    { label: "Messages", value: "1,284", icon: MessageSquare, color: "bg-rose", change: "+12%", up: true },
-    { label: "Active Chats", value: String(dashboardStats.onlineContacts), icon: Users, color: "bg-light-green", change: "+3", up: true },
-    { label: "Tasks", value: String(dashboardStats.totalTasks), icon: ClipboardList, color: "bg-dark-purple/10", change: `${dashboardStats.unfinishedTasks} unfinished`, up: false },
-    { label: "Contacts", value: String(dashboardStats.totalContacts), icon: FileText, color: "bg-green/20", change: String(dashboardStats.onlineContacts) + " online", up: true },
-    { label: "Groups", value: String(dashboardStats.totalGroups), icon: UserPlus, color: "bg-rose/40", change: "+1", up: true },
+    { label: "Messages", value: "0", icon: MessageSquare, color: "bg-rose", change: "No messages yet" },
+    { label: "Online", value: String(contacts.filter((c) => c.online).length), icon: Users, color: "bg-light-green", change: "contacts online" },
+    { label: "Tasks", value: String(tasks.length), icon: ClipboardList, color: "bg-dark-purple/10", change: tasks.length > 0 ? `${tasks.filter((t) => t.status === "todo").length} unfinished` : "No tasks yet" },
+    { label: "Contacts", value: String(contacts.length), icon: FileText, color: "bg-green/20", change: contacts.length > 0 ? String(contacts.filter((c) => c.online).length) + " online" : "No contacts yet" },
+    { label: "Groups", value: "0", icon: UserPlus, color: "bg-rose/40", change: "No groups yet" },
   ]
+
+  const continueTasks = tasks.filter((t) => t.status === "todo").slice(0, 4)
+
+  const addUserAsContact = async (user: UserSearchResult) => {
+    try {
+      await contactsApi.create({
+        name: user.name, seed: user.avatarSeed || user.username,
+        email: user.email, role: "User", online: user.online, favorite: false,
+        linkedUserId: user._id,
+      })
+      toast(`Added ${user.name} to contacts`, "success")
+      setUserResults([])
+      setSearchQuery("")
+    } catch { toast("Failed to add contact", "error") }
+  }
 
   const handleChatSend = () => {
     if (!chatMsg.trim()) return
@@ -116,7 +140,7 @@ export default function Dashboard() {
     setChatHistory((prev) => [...prev, { role: "user", text: userMsg }])
     setChatMsg("")
     setTimeout(() => {
-      setChatHistory((prev) => [...prev, { role: "bot", text: answerQuery(userMsg) }])
+      setChatHistory((prev) => [...prev, { role: "bot", text: answerQuery(userMsg, tasks, contacts) }])
     }, 400)
   }
 
@@ -127,7 +151,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-4">
             <div>
               <p className="text-xs font-semibold text-dark-purple/50 uppercase tracking-wider">{now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
-              <h1 className="text-2xl font-bold text-dark-purple mt-1">{greeting}, Alex 👋</h1>
+              <h1 className="text-2xl font-bold text-dark-purple mt-1">{greeting}, {userName} 👋</h1>
             </div>
             <div className="flex items-center gap-2 bg-light-gray rounded-xl px-3.5 py-2 self-end">
               <Clock size={14} className="text-dark-purple/40" />
@@ -166,23 +190,47 @@ export default function Dashboard() {
             onChange={(e) => { setSearchQuery(e.target.value); setShowResults(true) }}
             onFocus={() => setShowResults(true)}
             onBlur={() => setTimeout(() => setShowResults(false), 200)}
-            placeholder="Search tasks, contacts, groups..."
+            placeholder="Search users, tasks, contacts..."
             className="w-full bg-light-gray text-dark-purple text-sm pl-10 pr-4 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-dark-purple/10 focus:bg-off-white transition-all placeholder:text-dark-purple/25"
           />
           {showResults && searchQuery.trim() && (
-            <div className="absolute top-full left-0 right-0 mt-1.5 bg-off-white rounded-xl shadow-lg border border-gray/20 py-1.5 z-10 max-h-60 overflow-y-auto">
-              {filteredSearch.length === 0 ? (
-                <p className="text-xs text-dark-purple/40 px-4 py-3">No results found</p>
-              ) : (
-                filteredSearch.slice(0, 8).map((item, i) => (
-                  <div key={i} className="flex items-center gap-2.5 px-4 py-2 hover:bg-light-gray transition-colors cursor-pointer">
-                    <Avatar seed={item.seed} size="sm" className="rounded-md" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-dark-purple truncate">{item.label}</p>
+            <div className="absolute top-full left-0 right-0 mt-1.5 bg-off-white rounded-xl shadow-lg border border-gray/20 py-1.5 z-10 max-h-72 overflow-y-auto">
+              {userResults.length > 0 && (
+                <>
+                  <p className="text-[10px] font-semibold text-dark-purple/40 px-4 py-1.5 uppercase tracking-wider">Users</p>
+                  {userResults.map((u) => (
+                    <div key={u._id} onClick={() => onViewProfile?.(u._id)} className="flex items-center gap-2.5 px-4 py-2 hover:bg-light-gray transition-colors cursor-pointer">
+                      <Avatar seed={u.avatarSeed || u.username} size="sm" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-dark-purple truncate">{u.name}</p>
+                        <p className="text-[11px] text-dark-purple/40">@{u.username}</p>
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); addUserAsContact(u) }}
+                        className="text-[10px] font-semibold text-nowrap bg-dark-purple text-off-white px-2.5 py-1 rounded-lg hover:opacity-90 transition-opacity"
+                        aria-label={`Add ${u.name} as contact`}
+                      >+ Add</button>
                     </div>
-                    <span className="text-[10px] font-medium text-dark-purple/40 bg-light-gray px-2 py-0.5 rounded-full">{item.category}</span>
-                  </div>
-                ))
+                  ))}
+                </>
+              )}
+              {filteredSearch.length > 0 && (
+                <>
+                  {userResults.length > 0 && <div className="border-t border-light-gray my-1" />}
+                  <p className="text-[10px] font-semibold text-dark-purple/40 px-4 py-1.5 uppercase tracking-wider">Local</p>
+                  {filteredSearch.slice(0, 8).map((item, i) => (
+                    <div key={i} className="flex items-center gap-2.5 px-4 py-2 hover:bg-light-gray transition-colors cursor-pointer">
+                      <Avatar seed={item.seed} size="sm" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-dark-purple truncate">{item.label}</p>
+                      </div>
+                      <span className="text-[10px] font-medium text-dark-purple/40 bg-light-gray px-2 py-0.5 rounded-full">{item.category}</span>
+                    </div>
+                  ))}
+                </>
+              )}
+              {userResults.length === 0 && filteredSearch.length === 0 && (
+                <p className="text-xs text-dark-purple/40 px-4 py-3">No results found</p>
               )}
             </div>
           )}
@@ -197,7 +245,7 @@ export default function Dashboard() {
                 <span className={`w-9 h-9 rounded-lg ${s.color} flex items-center justify-center`}>
                   <s.icon size={16} className="text-dark-purple" />
                 </span>
-                <span className={`text-[11px] font-semibold ${s.up ? "text-green" : "text-dark-purple/50"}`}>{s.change}</span>
+                <span className="text-[11px] font-semibold text-dark-purple/50">{s.change}</span>
               </div>
               <p className="text-2xl font-bold text-dark-purple">{s.value}</p>
               <p className="text-xs text-dark-purple/50 mt-0.5">{s.label}</p>
@@ -209,8 +257,8 @@ export default function Dashboard() {
           <div className="col-span-2 bg-off-white rounded-xl p-5 border border-gray/20">
             <h2 className="text-sm font-bold text-dark-purple mb-4">Recent Activity</h2>
             <div className="space-y-0">
-              {activities.map((a, i) => (
-                  <div key={i} className="flex items-center gap-3 py-3 border-b border-light-gray last:border-0">
+              {activities.length > 0 ? activities.map((a, i) => (
+                <div key={i} className="flex items-center gap-3 py-3 border-b border-light-gray last:border-0">
                   <Avatar seed={a.seed} size="sm" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-dark-purple">
@@ -220,7 +268,12 @@ export default function Dashboard() {
                   </div>
                   <span className="text-[10px] text-dark-purple/40 shrink-0">{a.time}</span>
                 </div>
-              ))}
+              )) : (
+                <div className="py-8 text-center">
+                  <p className="text-sm text-dark-purple/40">No recent activity</p>
+                  <p className="text-xs text-dark-purple/30 mt-1">Your activity will appear here</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -253,10 +306,10 @@ export default function Dashboard() {
                 <span className="text-[10px] text-dark-purple/50">See all</span>
               </div>
               <div className="flex gap-3">
-                {frequent.slice(0, 4).map((f) => (
-                  <div key={f.seed} className="flex flex-col items-center gap-1 cursor-pointer">
-                    <Avatar seed={f.seed} size="md" status={f.online ? "online" : undefined} />
-                    <span className="text-[10px] text-dark-purple/70 font-medium">{f.name}</span>
+                {contacts.slice(0, 4).map((c) => (
+                  <div key={c.seed} className="flex flex-col items-center gap-1 cursor-pointer">
+                    <Avatar seed={c.seed} size="md" status={c.online ? "online" : undefined} />
+                    <span className="text-[10px] text-dark-purple/70 font-medium">{c.name}</span>
                   </div>
                 ))}
               </div>
@@ -267,25 +320,22 @@ export default function Dashboard() {
         <div className="col-span-2 bg-off-white rounded-xl p-5 border border-gray/20">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold text-dark-purple">Continue Tasks</h2>
-            <span className="text-[10px] text-dark-purple/50">{dashboardStats.unfinishedTasks} unfinished</span>
+            <span className="text-[10px] text-dark-purple/50">{tasks.filter((t) => t.status === "todo").length} unfinished</span>
           </div>
           <div className="space-y-1">
-            {[
-              { task: "Review design mockups", priority: "High", tag: "Design" },
-              { task: "Update API documentation", priority: "Medium", tag: "Dev" },
-              { task: "Prepare sprint presentation", priority: "High", tag: "Work" },
-              { task: "Reply to Sarah's message", priority: "Low", tag: "Chat" },
-            ].map((t, i) => (
-              <div key={i} className="flex items-center gap-3 py-2.5 px-3 rounded-lg hover:bg-light-gray transition-colors cursor-pointer">
+            {continueTasks.length === 0 ? (
+              <p className="text-sm text-dark-purple/30 text-center py-4">All tasks completed!</p>
+            ) : continueTasks.map((t, i) => (
+              <div key={t._id || i} className="flex items-center gap-3 py-2.5 px-3 rounded-lg hover:bg-light-gray transition-colors cursor-pointer">
                 <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${i === 0 ? "border-rose bg-rose/20" : "border-dark-purple/30"}`}>
                   {i === 0 && <div className="w-2 h-2 rounded-sm bg-rose" />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm ${i === 0 ? "text-dark-purple font-medium" : "text-dark-purple/60"}`}>{t.task}</p>
+                  <p className={`text-sm ${i === 0 ? "text-dark-purple font-medium" : "text-dark-purple/60"}`}>{t.title}</p>
                 </div>
                 <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                  t.priority === "High" ? "bg-rose/40 text-dark-purple" :
-                  t.priority === "Medium" ? "bg-light-green text-dark-purple" :
+                  t.priority === "urgent" ? "bg-rose/40 text-dark-purple" :
+                  t.priority === "high" ? "bg-light-green text-dark-purple" :
                   "bg-light-gray text-dark-purple/60"
                 }`}>{t.priority}</span>
               </div>
