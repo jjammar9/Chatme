@@ -1,0 +1,30 @@
+export interface ParticipantDetail {
+  name: string
+  username: string
+  avatarSeed: string
+}
+
+export interface Conversation {
+  _id: string
+  participants: string[]
+  isGroup: boolean
+  groupName?: string
+  groupAvatar?: string
+  lastMessage?: string
+  lastMessageTime?: string
+  createdAt: string
+  participantDetails: ParticipantDetail[]
+  unreadCount?: number
+}
+
+export interface Message {
+  _id: string
+  conversationId: string
+  senderId: string
+  senderName: string
+  senderSeed: string
+  content: string
+  type: "text" | "image" | "file" | "system"
+  readBy: string[]
+  createdAt: string
+}

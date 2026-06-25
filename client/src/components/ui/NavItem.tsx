@@ -5,6 +5,7 @@ interface NavItemProps {
   variant?: "dark" | "light"
   onClick?: () => void
   className?: string
+  badge?: number
 }
 
 const variantStyles = {
@@ -25,6 +26,7 @@ export default function NavItem({
   variant = "dark",
   onClick,
   className = "",
+  badge,
 }: NavItemProps) {
   const styles = variantStyles[variant]
   return (
@@ -38,7 +40,12 @@ export default function NavItem({
       `}
     >
       {icon}
-      {label}
+      <span className="flex-1 text-left">{label}</span>
+      {badge !== undefined && badge > 0 && (
+        <span className="w-5 h-5 rounded-full bg-rose text-off-white text-[10px] font-bold flex items-center justify-center shrink-0">
+          {badge > 9 ? "9+" : badge}
+        </span>
+      )}
     </button>
   )
 }

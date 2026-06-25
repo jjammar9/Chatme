@@ -84,6 +84,8 @@ export const users = {
     fetch(`${BASE}/users/search?q=${encodeURIComponent(q)}`, { headers: headers() }).then(handleResponse),
   byId: (id: string) =>
     fetch(`${BASE}/users/by-id/${id}`, { headers: headers() }).then(handleResponse),
+  batch: (ids: string[]) =>
+    fetch(`${BASE}/users/batch`, { method: "POST", headers: headers(), body: JSON.stringify({ ids }) }).then(handleResponse),
 }
 
 // Friend Requests
@@ -118,4 +120,6 @@ export const conversations = {
     fetch(`${BASE}/conversations/${id}/messages`, { headers: headers() }).then(handleResponse),
   sendMessage: (id: string, data: Record<string, unknown>) =>
     fetch(`${BASE}/conversations/${id}/messages`, { method: "POST", headers: headers(), body: JSON.stringify(data) }).then(handleResponse),
+  markRead: (id: string) =>
+    fetch(`${BASE}/conversations/${id}/read`, { method: "PUT", headers: headers() }).then(handleResponse),
 }

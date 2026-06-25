@@ -74,6 +74,7 @@ function App() {
   const [settingsKey, setSettingsKey] = useState(0)
   const [showLogout, setShowLogout] = useState(false)
   const [viewProfileUserId, setViewProfileUserId] = useState<string | null>(null)
+  const [selectedConversation, setSelectedConversation] = useState<import("./types/conversation").Conversation | null>(null)
 
   const handleLogin = () => {
     setIsLoggedIn(true)
@@ -122,8 +123,8 @@ function App() {
           <AppLayout
             sidebar={<Sidebar activeKey={activeNav} onNavChange={handleNavChange} onViewProfile={setViewProfileUserId} />}
             mainContent={<MainContent activeNav={activeNav} onChat={() => setActiveNav("messages")} settingsKey={settingsKey} onViewProfile={setViewProfileUserId} />}
-            chatList={<ChatList />}
-            messagePanel={<MessagePanel />}
+            chatList={<ChatList selectedConversation={selectedConversation} />}
+            messagePanel={<MessagePanel selectedConversationId={selectedConversation?._id || null} onSelectConversation={setSelectedConversation} />}
             showMessages={activeNav === "messages"}
           />
           <LogoutModal open={showLogout} onClose={() => setShowLogout(false)} onLogout={handleLogout} />
