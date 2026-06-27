@@ -15,6 +15,7 @@ export interface Conversation {
   createdAt: string
   participantDetails: ParticipantDetail[]
   unreadCount?: number
+  isFavourite?: boolean
 }
 
 export interface Message {
@@ -24,7 +25,11 @@ export interface Message {
   senderName: string
   senderSeed: string
   content: string
-  type: "text" | "image" | "file" | "system"
+  type: "text" | "image" | "file" | "voice" | "system"
   readBy: string[]
+  fileUrl?: string
+  fileName?: string
+  fileSize?: number
+  fileMimeType?: string
   createdAt: string
 }

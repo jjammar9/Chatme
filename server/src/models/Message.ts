@@ -6,8 +6,12 @@ export interface IMessage extends Document {
   senderName: string
   senderSeed: string
   content: string
-  type: "text" | "image" | "file" | "system"
+  type: "text" | "image" | "file" | "voice" | "system"
   readBy: string[]
+  fileUrl?: string
+  fileName?: string
+  fileSize?: number
+  fileMimeType?: string
   createdAt: Date
 }
 
@@ -17,8 +21,12 @@ const messageSchema = new Schema<IMessage>({
   senderName: { type: String, required: true },
   senderSeed: { type: String, default: "" },
   content: { type: String, required: true },
-  type: { type: String, enum: ["text", "image", "file", "system"], default: "text" },
+  type: { type: String, enum: ["text", "image", "file", "voice", "system"], default: "text" },
   readBy: [{ type: String }],
+  fileUrl: { type: String },
+  fileName: { type: String },
+  fileSize: { type: Number },
+  fileMimeType: { type: String },
   createdAt: { type: Date, default: Date.now },
 })
 

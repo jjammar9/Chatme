@@ -48,6 +48,7 @@ router.get("/", async (req: AuthRequest, res: Response) => {
         .filter((p) => p !== req.userId)
         .map((p) => userMap[p] || { name: "Unknown", username: "", avatarSeed: p }),
       unreadCount: unreadMap[c._id.toString()] || 0,
+      isFavourite: (c.isFavourite || []).includes(req.userId!),
     }))
 
     res.json({ conversations: enriched })
@@ -74,7 +75,7 @@ router.post("/", async (req: AuthRequest, res: Response) => {
           .select("name username avatarSeed").lean()
         const userMap: Record<string, any> = {}
         for (const u of otherUsers) userMap[u._id.toString()] = { name: u.name, username: u.username, avatarSeed: u.avatarSeed || u.name || u.username || "" }
-        res.json({ conversation: { ...existing, participantDetails: participants.filter((p: string) => p !== req.userId).map((p: string) => userMap[p] || { name: "Unknown", username: "", avatarSeed: p }) } })
+        res.json({ conversation: { ...existing, participantDetails: participants.filter((p: string) => p !== req.userId).map((p: string) => userMap[p] || { name: "Unknown", username: "", avatarSeed: p }), isFavourite: (existing.isFavourite || []).includes(req.userId!) } })
         return
       }
     }
@@ -95,6 +96,7 @@ router.post("/", async (req: AuthRequest, res: Response) => {
     const enriched = {
       ...conversation.toObject(),
       participantDetails: otherUserIds.map((p: string) => userMap[p] || { name: "Unknown", username: "", avatarSeed: p }),
+      isFavourite: (conversation.isFavourite || []).includes(req.userId!),
     }
 
     res.status(201).json({ conversation: enriched })
@@ -140,6 +142,23 @@ router.put("/:id/read", async (req: AuthRequest, res: Response) => {
   }
 })
 
+router.put("/:id/favourite", async (req: AuthRequest, res: Response) => {
+  try {
+    const conversation = await Conversation.findById(req.params.id)
+    if (!conversation) { res.status(404).json({ error: "Conversation not found" }); return }
+    if (!conversation.participants.includes(req.userId!)) {
+      res.status(403).json({ error: "Not a participant" }); return
+    }
+    const idx = conversation.isFavourite.indexOf(req.userId!)
+    if (idx > -1) conversation.isFavourite.splice(idx, 1)
+    else conversation.isFavourite.push(req.userId!)
+    await conversation.save()
+    res.json({ isFavourite: conversation.isFavourite.includes(req.userId!) })
+  } catch {
+    res.status(500).json({ error: "Server error" })
+  }
+})
+
 router.post("/:id/messages", async (req: AuthRequest, res: Response) => {
   try {
     const conversation = await Conversation.findById(req.params.id)
@@ -147,7 +166,7 @@ router.post("/:id/messages", async (req: AuthRequest, res: Response) => {
     if (!conversation.participants.includes(req.userId!)) {
       res.status(403).json({ error: "Not a participant" }); return
     }
-    const { senderName, senderSeed, content, type } = req.body
+    const { senderName, senderSeed, content, type, fileUrl, fileName, fileSize, fileMimeType } = req.body
     const message = await Message.create({
       conversationId: req.params.id,
       senderId: req.userId,
@@ -155,6 +174,10 @@ router.post("/:id/messages", async (req: AuthRequest, res: Response) => {
       senderSeed: senderSeed || "",
       content,
       type: type || "text",
+      fileUrl,
+      fileName,
+      fileSize,
+      fileMimeType,
       readBy: [req.userId],
     })
     conversation.lastMessage = content
@@ -169,7 +192,7 @@ router.post("/:id/messages", async (req: AuthRequest, res: Response) => {
           userId: pid,
           type: "message",
           fromUserId: req.userId,
-          message: `${sender?.name || "Someone"} sent you a message: ${content.length > 50 ? content.slice(0, 50) + "..." : content}`,
+          message: `${sender?.name || "Someone"} sent you a message${type === "image" ? " 📷" : type === "file" ? " 📎" : ""}: ${type === "text" ? (content.length > 50 ? content.slice(0, 50) + "..." : content) : ""}`,
           relatedId: req.params.id,
         })
       }

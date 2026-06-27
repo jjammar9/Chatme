@@ -110,6 +110,20 @@ export const notifications = {
     fetch(`${BASE}/notifications/read-all`, { method: "PUT", headers: headers() }).then(handleResponse),
 }
 
+// Upload
+export const upload = {
+  file: (file: File) => {
+    const token = localStorage.getItem("token")
+    const formData = new FormData()
+    formData.append("file", file)
+    return fetch(`${BASE}/upload`, {
+      method: "POST",
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: formData,
+    }).then(handleResponse)
+  },
+}
+
 // Conversations
 export const conversations = {
   list: () =>
@@ -122,4 +136,6 @@ export const conversations = {
     fetch(`${BASE}/conversations/${id}/messages`, { method: "POST", headers: headers(), body: JSON.stringify(data) }).then(handleResponse),
   markRead: (id: string) =>
     fetch(`${BASE}/conversations/${id}/read`, { method: "PUT", headers: headers() }).then(handleResponse),
+  toggleFavourite: (id: string) =>
+    fetch(`${BASE}/conversations/${id}/favourite`, { method: "PUT", headers: headers() }).then(handleResponse),
 }

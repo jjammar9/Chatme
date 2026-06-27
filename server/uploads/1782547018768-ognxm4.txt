@@ -1,0 +1,13 @@
+A few project ideas ranked by resume wow-factor:
+
+1. AI Chat Dashboard — Custom ChatGPT wrapper with conversation history, markdown rendering, file upload, dark/light themes, deployed live. Shows you can integrate APIs, manage complex state, and build polished UIs.
+
+2. Real-time Collaborative Whiteboard — Canvas drawing with WebSockets, room sharing, undo/redo, shapes + text. Shows real-time, canvas API, and backend skills.
+
+3. Full Kanban Project Manager — Drag-and-drop boards (like Trello), user auth, team sharing, activity logs. Shows drag-and-drop, state management, auth patterns.
+
+4. Portfolio/Link-in-Bio Builder — Drag-and-drop page builder with custom links, themes, analytics dashboard, share URL. Shows visual editing, complex state, and CRUD.
+
+5. Social Recipe App — Upload recipes, AI image recognition, social features (likes/comments), meal planner calendar. Shows media upload, AI integration, social features.
+
+Which type appeals to you? The AI Chat Dashboard is the quickest to build and very impressive for interviews since AI is hot right now.

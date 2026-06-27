@@ -7,6 +7,7 @@ export interface IConversation extends Document {
   groupAvatar?: string
   lastMessage?: string
   lastMessageTime?: Date
+  isFavourite: string[]
   createdAt: Date
 }
 
@@ -17,6 +18,7 @@ const conversationSchema = new Schema<IConversation>({
   groupAvatar: { type: String, default: "" },
   lastMessage: { type: String, default: "" },
   lastMessageTime: { type: Date },
+  isFavourite: [{ type: String }],
   createdAt: { type: Date, default: Date.now },
 })
 

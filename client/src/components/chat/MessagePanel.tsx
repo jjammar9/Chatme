@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react"
-import { ExternalLink, MessageCircle, Plus, Search, X, Users, Loader } from "lucide-react"
+import { ExternalLink, MessageCircle, Search, X, Loader } from "lucide-react"
 import Avatar from "../ui/Avatar"
 import { conversations, users } from "../../lib/api"
 import { getAvatarUrl } from "../../lib/utils"
@@ -161,6 +161,12 @@ export default function MessagePanel({ selectedConversationId, onSelectConversat
     fetchConversations()
   }, [fetchConversations])
 
+  useEffect(() => {
+    const handler = () => fetchConversations()
+    window.addEventListener("conversation-fav-update", handler)
+    return () => window.removeEventListener("conversation-fav-update", handler)
+  }, [fetchConversations])
+
   const handleSelect = (conv: Conversation) => {
     const cleared = conv.unreadCount || 0
     setConvList((prev) => prev.map((c) => c._id === conv._id ? { ...c, unreadCount: 0 } : c))
@@ -184,6 +190,7 @@ export default function MessagePanel({ selectedConversationId, onSelectConversat
     }
   }
 
+  const favourites = convList.filter((c) => c.isFavourite)
   const all = convList
 
   return (
@@ -221,6 +228,17 @@ export default function MessagePanel({ selectedConversationId, onSelectConversat
             </div>
           ) : (
             <>
+              {favourites.length > 0 && (
+                <>
+                  <div className="flex items-center pl-5 pr-1 pb-2">
+                    <span className="text-xs font-extrabold text-dark-purple/40 uppercase tracking-widest">Favourites</span>
+                  </div>
+                  {favourites.map((conv) => (
+                    <ChatItem key={conv._id} conv={conv} selected={selectedConversationId === conv._id} onSelect={handleSelect} />
+                  ))}
+                  <div className="my-3 mx-5 border-t border-light-gray" />
+                </>
+              )}
               <div className="flex items-center pl-5 pr-1 pb-2">
                 <span className="text-lg font-bold text-dark-purple">All Chats</span>
                 <ExternalLink size={16} className="ml-1.5 text-dark-purple" />

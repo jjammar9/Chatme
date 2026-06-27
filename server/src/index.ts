@@ -14,6 +14,7 @@ import seedRoutes from "./routes/seed"
 import userRoutes from "./routes/users"
 import friendRequestRoutes from "./routes/friendRequests"
 import notificationRoutes from "./routes/notifications"
+import uploadRoutes from "./routes/upload"
 
 dotenv.config()
 
@@ -34,6 +35,8 @@ app.use("/api/seed", seedRoutes)
 app.use("/api/users", userRoutes)
 app.use("/api/friend-requests", friendRequestRoutes)
 app.use("/api/notifications", notificationRoutes)
+app.use("/api/upload", uploadRoutes)
+app.use("/uploads", express.static("uploads"))
 
 io.on("connection", (socket) => {
   console.log("Socket connected:", socket.id)
