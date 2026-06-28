@@ -73,6 +73,7 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
   const [contacts, setContacts] = useState<Contact[]>([])
   const [userResults, setUserResults] = useState<UserSearchResult[]>([])
   const [totalUnread, setTotalUnread] = useState(0)
+  const [groupCount, setGroupCount] = useState(0)
   const [showNewMsg, setShowNewMsg] = useState(false)
   const [newMsgContact, setNewMsgContact] = useState<Contact | null>(null)
   const [newMsgText, setNewMsgText] = useState("")
@@ -106,6 +107,7 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
           if (mounted) {
             const convs = data.conversations || []
             setTotalUnread(convs.reduce((acc: number, c: any) => acc + (c.unreadCount || 0), 0))
+            setGroupCount(convs.filter((c: any) => c.isGroup).length)
           }
         }).catch(() => { failed = true; return null }),
       ]).finally(() => { if (mounted) { setLoading(false); if (failed) toast("Some dashboard data failed to load", "error") } })
@@ -164,7 +166,7 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
     { label: "Contacts", value: String(contacts.length), icon: Users, color: "bg-light-green", change: contacts.length > 0 ? `${contacts.length} total` : "No contacts yet" },
     { label: "Tasks", value: String(tasks.length), icon: ClipboardList, color: "bg-dark-purple/10", change: tasks.length > 0 ? `${tasks.filter((t) => t.status === "todo").length} unfinished` : "No tasks yet" },
     { label: "Favourites", value: String(contacts.filter((c) => c.favorite).length), icon: FileText, color: "bg-green/20", change: contacts.filter((c) => c.favorite).length > 0 ? "favourite contacts" : "No favourites yet" },
-    { label: "Groups", value: String(mockCommunities.length), icon: UserPlus, color: "bg-rose/40", change: mockCommunities.length > 0 ? `${mockCommunities.length} total` : "No groups yet" },
+    { label: "Groups", value: String(groupCount), icon: UserPlus, color: "bg-dark-purple/15", change: groupCount > 0 ? `${groupCount} total` : "No groups yet" },
   ]
 
   const continueTasks = tasks.filter((t) => t.status === "todo").slice(0, 4)
