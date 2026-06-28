@@ -356,19 +356,17 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
     }
   }
 
-  const handleDelete = async (msgId: string, mode: "me" | "everyone") => {
+  const handleDelete = (msgId: string, mode: "me" | "everyone") => {
     if (!convId) return
-    try {
-      const data = await conversations.deleteMessage(convId, msgId, mode)
-      if (mode === "me" || data.mode === "me") {
-        setMessages((prev) => prev.filter((m) => m._id !== msgId))
-      } else if (data.message) {
-        setMessages((prev) => prev.map((m) => m._id === msgId ? data.message : m))
-      }
-    } catch (e) {
-      console.error("Failed to delete message", e)
-    }
     setDeleteMsgId(null)
+    if (mode === "me") {
+      setMessages((prev) => prev.filter((m) => m._id !== msgId))
+    } else {
+      setMessages((prev) => prev.map((m) => m._id === msgId ? { ...m, isDeleted: true, content: "" } : m))
+    }
+    conversations.deleteMessage(convId, msgId, mode).catch(() => {
+      setMessages((prev) => prev.map((m) => m._id === msgId ? { ...m, isDeleted: false, content: "Message failed to delete" } : m))
+    })
   }
 
   const renderMessage = (msg: Message, options?: { showTimestamp?: boolean }) => {
