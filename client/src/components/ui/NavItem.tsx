@@ -42,7 +42,7 @@ export default function NavItem({
       {icon}
       <span className="flex-1 text-left">{label}</span>
       {badge !== undefined && badge > 0 && (
-        <span className="w-5 h-5 rounded-full bg-rose text-off-white text-[10px] font-bold flex items-center justify-center shrink-0">
+        <span className="w-5 h-5 rounded-full bg-red text-off-white text-[10px] font-bold flex items-center justify-center shrink-0">
           {badge > 9 ? "9+" : badge}
         </span>
       )}

@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef, useMemo } from "react"
-import { Heart, Search, Video, Phone, Send, Smile, Paperclip, Image, Loader, FileText, X, Download, Mic, MicOff, Play, Pause, MessageCircle, File } from "lucide-react"
+import { useState, useEffect, useRef, useMemo, Fragment } from "react"
+import { Heart, Search, Video, Phone, Send, Smile, Paperclip, Image, Loader, FileText, X, Download, Mic, MicOff, Play, Pause, MessageCircle, File, Check, CheckCheck, ChevronDown } from "lucide-react"
 import Avatar from "../ui/Avatar"
 import EmojiPicker from "./EmojiPicker"
 import { conversations, upload as uploadApi } from "../../lib/api"
 import type { Conversation, Message } from "../../types/conversation"
-import { formatTime, playMessageSound } from "../../lib/utils"
+import { formatTime, formatDate, isSameDay, playMessageSound } from "../../lib/utils"
 
 interface ChatListProps {
   selectedConversation: Conversation | null
@@ -20,6 +20,20 @@ function getAvatarSeed(conv?: Conversation | null): string {
   if (!conv) return ""
   if (conv.isGroup) return conv.groupName || "group"
   return conv.participantDetails?.[0]?.avatarSeed || conv.participantDetails?.[0]?.name || "user"
+}
+
+function formatDateSeparator(d: Date): string {
+  const now = new Date()
+  if (isSameDay(d, now)) return "Today"
+  const yesterday = new Date(now)
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (isSameDay(d, yesterday)) return "Yesterday"
+  return formatDate(d)
+}
+
+function isInGroup(a: Message, b: Message): boolean {
+  if (a.senderId !== b.senderId) return false
+  return Math.abs(new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) < 5 * 60 * 1000
 }
 
 export default function ChatList({ selectedConversation }: ChatListProps) {
@@ -49,7 +63,10 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [isAtBottom, setIsAtBottom] = useState(true)
   const currentUserId = localStorage.getItem("userId") || ""
+  const otherParticipantId = selectedConversation?.participants?.find((p) => p !== currentUserId) || ""
   const currentUserData = JSON.parse(localStorage.getItem("user") || "{}")
   const pollRef = useRef<ReturnType<typeof setInterval>>()
 
@@ -103,8 +120,8 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
 
   useEffect(() => {
     if (!messagesEndRef.current) return
-    messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+    if (isAtBottom) messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
+  }, [messages, isAtBottom])
 
   useEffect(() => {
     if (!previewUrl) return
@@ -354,8 +371,10 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
     setDeleteMsgId(null)
   }
 
-  const renderMessage = (msg: Message) => {
+  const renderMessage = (msg: Message, options?: { showTimestamp?: boolean }) => {
     const isMe = msg.senderId === currentUserId
+    const showTime = options?.showTimestamp !== false
+    const isRead = msg.readBy?.includes(otherParticipantId)
     if (msg.type === "image") {
       return (
         <div className={`max-w-[80%] ${isMe ? "text-right" : ""}`}>
@@ -379,9 +398,12 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
                 <Download size="14" className="text-white" />
               </button>
             </div>
-            <span className={`text-[10px] ${isMe ? "text-off-white/50" : "text-dark-purple/40"} text-right block px-2 pb-1`}>
-              {formatTime(new Date(msg.createdAt))}
-            </span>
+            {showTime && (
+              <span className={`text-[10px] ${isMe ? "text-off-white/50" : "text-dark-purple/40"} text-right block px-2 pb-1`}>
+                {isMe && (isRead ? <CheckCheck size="11" className="inline mr-0.5 -mt-0.5" /> : <Check size="11" className="inline mr-0.5 -mt-0.5" />)}
+                {formatTime(new Date(msg.createdAt))}
+              </span>
+            )}
           </div>
         </div>
       )
@@ -405,9 +427,12 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
                 <Download size="14" className={isMe ? "text-off-white/70" : "text-dark-purple/60"} />
               </button>
             </div>
-            <span className={`text-[10px] ${isMe ? "text-off-white/50" : "text-dark-purple/40"} text-right block mt-1`}>
-              {formatTime(new Date(msg.createdAt))}
-            </span>
+            {showTime && (
+              <span className={`text-[10px] ${isMe ? "text-off-white/50" : "text-dark-purple/40"} text-right block mt-1`}>
+                {isMe && (isRead ? <CheckCheck size="11" className="inline mr-0.5 -mt-0.5" /> : <Check size="11" className="inline mr-0.5 -mt-0.5" />)}
+                {formatTime(new Date(msg.createdAt))}
+              </span>
+            )}
           </div>
         </div>
       )
@@ -432,9 +457,12 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
               </div>
               <span className={`text-[10px] ${isMe ? "text-off-white/50" : "text-dark-purple/40"} min-w-[30px] tabular-nums`}>{isPlaying && voiceProgress[msg.fileUrl || msg.content] ? `${Math.round((voiceProgress[msg.fileUrl || msg.content] || 0) * (duration || 1))}s` : duration > 0 ? `${duration}s` : "..."}</span>
             </div>
-            <span className={`text-[10px] ${isMe ? "text-off-white/50" : "text-dark-purple/40"} text-right block mt-1`}>
-              {formatTime(new Date(msg.createdAt))}
-            </span>
+            {showTime && (
+              <span className={`text-[10px] ${isMe ? "text-off-white/50" : "text-dark-purple/40"} text-right block mt-1`}>
+                {isMe && (isRead ? <CheckCheck size="11" className="inline mr-0.5 -mt-0.5" /> : <Check size="11" className="inline mr-0.5 -mt-0.5" />)}
+                {formatTime(new Date(msg.createdAt))}
+              </span>
+            )}
           </div>
         </div>
       )
@@ -471,20 +499,23 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
         ) : (
           <div className={`inline-block relative group ${isMe ? "bg-dark-purple rounded-2xl rounded-br-sm" : "bg-white rounded-2xl rounded-bl-sm"} px-4 py-2.5`}>
             <p className={`text-sm ${isMe ? "text-off-white" : "text-dark-purple"} whitespace-pre-wrap break-words`}>{msg.content}</p>
-            <div className="flex items-center justify-end gap-1 mt-1">
-              {isMe && editingMsgId !== msg._id && !msg.isDeleted && (
-                <div className="flex items-center gap-0.5">
-                  <button onClick={() => handleEditStart(msg)} className="w-5 h-5 rounded-md bg-dark-purple/50 flex items-center justify-center hover:bg-dark-purple/80 transition-colors" aria-label="Edit message">
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                  </button>
-                  <button onClick={() => setDeleteMsgId(msg._id)} className="w-5 h-5 rounded-md bg-dark-purple/50 flex items-center justify-center hover:bg-red/70 transition-colors" aria-label="Delete message">
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                  </button>
-                </div>
-              )}
-              {msg.editedAt && <span className={`text-[9px] ${isMe ? "text-off-white/40" : "text-dark-purple/30"}`}>edited</span>}
-              <span className={`text-[10px] ${isMe ? "text-off-white/50" : "text-dark-purple/40"}`}>{formatTime(new Date(msg.createdAt))}</span>
-            </div>
+            {showTime && (
+              <div className="flex items-center justify-end gap-1 mt-1">
+                {isMe && editingMsgId !== msg._id && !msg.isDeleted && (
+                  <div className="flex items-center gap-0.5">
+                    <button onClick={() => handleEditStart(msg)} className="w-5 h-5 rounded-md bg-dark-purple/50 flex items-center justify-center hover:bg-dark-purple/80 transition-colors" aria-label="Edit message">
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                    </button>
+                    <button onClick={() => setDeleteMsgId(msg._id)} className="w-5 h-5 rounded-md bg-dark-purple/50 flex items-center justify-center hover:bg-red/70 transition-colors" aria-label="Delete message">
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    </button>
+                  </div>
+                )}
+                {msg.editedAt && <span className={`text-[9px] ${isMe ? "text-off-white/40" : "text-dark-purple/30"}`}>edited</span>}
+                {isMe && (isRead ? <CheckCheck size="11" className={isMe ? "text-off-white/50" : "text-dark-purple/40"} /> : <Check size="11" className={isMe ? "text-off-white/50" : "text-dark-purple/40"} />)}
+                <span className={`text-[10px] ${isMe ? "text-off-white/50" : "text-dark-purple/40"}`}>{formatTime(new Date(msg.createdAt))}</span>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -529,7 +560,11 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
           </button>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-5 space-y-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 relative" onScroll={() => {
+        if (!scrollRef.current) return
+        const { scrollTop, scrollHeight, clientHeight } = scrollRef.current
+        setIsAtBottom(scrollHeight - scrollTop - clientHeight < 50)
+      }}>
         {loading ? (
           <div className="flex justify-center py-10"><Loader size="20" className="animate-spin text-dark-purple/30" /></div>
         ) : messages.length === 0 ? (
@@ -541,26 +576,53 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
             <p className="text-xs text-dark-purple/30 mt-1">Send a message to start the conversation</p>
           </div>
         ) : (
-          messages.map((msg) => {
+          messages.map((msg, idx) => {
             const isMe = msg.senderId === currentUserId
+            const prev = idx > 0 ? messages[idx - 1] : null
+            const next = idx < messages.length - 1 ? messages[idx + 1] : null
+            const showDateSep = !prev || !isSameDay(new Date(msg.createdAt), new Date(prev.createdAt))
+            const isGroupStart = !prev || !isInGroup(prev, msg)
+            const isGroupEnd = !next || !isInGroup(msg, next)
             return (
-              <div key={msg._id} className={`flex ${isMe ? "justify-end" : "justify-start"} items-end gap-2 px-8`}>
-                {!isMe && (
-                  <div className="shrink-0">
-                    <Avatar seed={msg.senderSeed || msg.senderName} size="sm" />
+              <Fragment key={msg._id}>
+                {showDateSep && (
+                  <div className="flex items-center justify-center my-4">
+                    <span className="text-[10px] font-bold text-dark-purple/30 bg-light-gray px-3 py-1 rounded-full uppercase tracking-wider">
+                      {formatDateSeparator(new Date(msg.createdAt))}
+                    </span>
                   </div>
                 )}
-                {renderMessage(msg)}
-                {isMe && (
-                  <div className="shrink-0">
-                    <Avatar seed={currentUserData.avatarSeed || currentUserData.username || currentUserData.name || "user"} size="sm" />
-                  </div>
-                )}
-              </div>
+                <div className={`flex ${isMe ? "justify-end" : "justify-start"} items-end gap-2 px-8 ${isGroupStart ? "mt-4" : "mt-0.5"}`}>
+                  {!isMe && (isGroupStart ? (
+                    <div className="shrink-0">
+                      <Avatar seed={msg.senderSeed || msg.senderName} size="sm" />
+                    </div>
+                  ) : (
+                    <div className="w-8 shrink-0" />
+                  ))}
+                  {renderMessage(msg, { showTimestamp: isGroupEnd })}
+                  {isMe && (isGroupStart ? (
+                    <div className="shrink-0">
+                      <Avatar seed={currentUserData.avatarSeed || currentUserData.username || currentUserData.name || "user"} size="sm" />
+                    </div>
+                  ) : (
+                    <div className="w-8 shrink-0" />
+                  ))}
+                </div>
+              </Fragment>
             )
           })
         )}
         <div ref={messagesEndRef} />
+        {!isAtBottom && (
+          <button
+            onClick={() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })}
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 w-9 h-9 rounded-full bg-dark-purple shadow-lg flex items-center justify-center hover:bg-deep-purple transition-colors animate-bounce"
+            aria-label="Scroll to bottom"
+          >
+            <ChevronDown size="18" className="text-off-white" />
+          </button>
+        )}
       </div>
       <div className="flex items-center gap-2 px-4 py-3 bg-off-white border-t border-light-gray">
         <div className="flex items-center gap-1 h-10">
