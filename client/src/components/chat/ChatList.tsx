@@ -38,6 +38,9 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
   const [recordingDuration, setRecordingDuration] = useState(0)
   const [playingVoice, setPlayingVoice] = useState<string | null>(null)
   const [voiceProgress, setVoiceProgress] = useState<Record<string, number>>({})
+  const [editingMsgId, setEditingMsgId] = useState<string | null>(null)
+  const [editText, setEditText] = useState("")
+  const [deleteMsgId, setDeleteMsgId] = useState<string | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const recordedChunksRef = useRef<Blob[]>([])
   const recordingTimerRef = useRef<ReturnType<typeof setInterval>>()
@@ -84,8 +87,9 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
         const data = await conversations.messages(convId)
         const newMsgs = (data.messages || [])
         setMessages((prev) => {
-          if (newMsgs.length > prev.length) {
-            const added = newMsgs.slice(prev.length)
+          const realPrev = prev.filter((m) => !m._id.startsWith("temp-"))
+          const added = newMsgs.filter((m) => !realPrev.some((r) => r._id === m._id))
+          if (added.length > 0) {
             const hasIncoming = added.some((m: Message) => m.senderId !== currentUserId)
             if (hasIncoming) playMessageSound()
           }
@@ -146,7 +150,12 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
         type: "text",
       })
       if (data.message) {
-        setMessages((prev) => prev.map((m) => m._id === tempId ? data.message : m))
+        setMessages((prev) => {
+          const hasTemp = prev.some((m) => m._id === tempId)
+          if (hasTemp) return prev.map((m) => m._id === tempId ? data.message : m)
+          const exists = prev.some((m) => m._id === data.message._id)
+          return exists ? prev : [...prev, data.message]
+        })
       }
     } catch (e) {
       console.error("Failed to send message", e)
@@ -307,6 +316,44 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
     }
   }
 
+  const handleEditStart = (msg: Message) => {
+    setEditingMsgId(msg._id)
+    setEditText(msg.content)
+  }
+
+  const handleEditCancel = () => {
+    setEditingMsgId(null)
+    setEditText("")
+  }
+
+  const handleEditSave = async (msgId: string) => {
+    if (!editText.trim() || !convId) return
+    try {
+      const data = await conversations.editMessage(convId, msgId, editText.trim())
+      if (data.message) {
+        setMessages((prev) => prev.map((m) => m._id === msgId ? data.message : m))
+        handleEditCancel()
+      }
+    } catch (e) {
+      console.error("Failed to edit message", e)
+    }
+  }
+
+  const handleDelete = async (msgId: string, mode: "me" | "everyone") => {
+    if (!convId) return
+    try {
+      const data = await conversations.deleteMessage(convId, msgId, mode)
+      if (mode === "me" || data.mode === "me") {
+        setMessages((prev) => prev.filter((m) => m._id !== msgId))
+      } else if (data.message) {
+        setMessages((prev) => prev.map((m) => m._id === msgId ? data.message : m))
+      }
+    } catch (e) {
+      console.error("Failed to delete message", e)
+    }
+    setDeleteMsgId(null)
+  }
+
   const renderMessage = (msg: Message) => {
     const isMe = msg.senderId === currentUserId
     if (msg.type === "image") {
@@ -393,15 +440,53 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
       )
     }
 
-    return (
-      <div className={`max-w-[80%] ${isMe ? "text-right" : ""}`}>
-        {!isMe && <span className="text-xs font-bold text-dark-purple/60 block mb-1 text-left">{msg.senderName}</span>}
-        <div className={`inline-block ${isMe ? "bg-dark-purple rounded-2xl rounded-br-sm" : "bg-white rounded-2xl rounded-bl-sm"} px-4 py-2.5`}>
-          <p className={`text-sm ${isMe ? "text-off-white" : "text-dark-purple"} whitespace-pre-wrap break-words`}>{msg.content}</p>
-          <span className={`text-[10px] ${isMe ? "text-off-white/50" : "text-dark-purple/40"} text-right block mt-1`}>
-            {formatTime(new Date(msg.createdAt))}
-          </span>
+    if (msg.isDeleted) {
+      return (
+        <div className={`max-w-[80%] ${isMe ? "text-right" : ""}`}>
+          {!isMe && <span className="text-xs font-bold text-dark-purple/60 block mb-1 text-left">{msg.senderName}</span>}
+          <div className={`inline-block italic px-4 py-2.5 ${isMe ? "bg-dark-purple/30 rounded-2xl rounded-br-sm" : "bg-gray/30 rounded-2xl rounded-bl-sm"}`}>
+            <p className={`text-sm ${isMe ? "text-off-white/40" : "text-dark-purple/30"}`}>This message was deleted</p>
+          </div>
         </div>
+      )
+    }
+
+    return (
+      <div className={`max-w-[80%] group relative ${isMe ? "text-right" : ""}`}>
+        {!isMe && <span className="text-xs font-bold text-dark-purple/60 block mb-1 text-left">{msg.senderName}</span>}
+        {isMe && editingMsgId === msg._id ? (
+          <div className={`inline-block bg-off-white rounded-2xl rounded-br-sm border border-dark-purple/20 px-3 py-2`}>
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEditSave(msg._id) } if (e.key === "Escape") handleEditCancel() }}
+              className="w-full bg-transparent text-sm text-dark-purple outline-none resize-none min-h-[40px]"
+              autoFocus
+            />
+            <div className="flex items-center justify-end gap-2 mt-1">
+              <button onClick={handleEditCancel} className="text-xs text-dark-purple/50 hover:text-dark-purple px-2 py-0.5 rounded">Cancel</button>
+              <button onClick={() => handleEditSave(msg._id)} className="text-xs font-bold text-off-white bg-dark-purple px-3 py-0.5 rounded-lg hover:bg-deep-purple">Save</button>
+            </div>
+          </div>
+        ) : (
+          <div className={`inline-block ${isMe ? "bg-dark-purple rounded-2xl rounded-br-sm" : "bg-white rounded-2xl rounded-bl-sm"} px-4 py-2.5`}>
+            <p className={`text-sm ${isMe ? "text-off-white" : "text-dark-purple"} whitespace-pre-wrap break-words`}>{msg.content}</p>
+            <div className="flex items-center justify-end gap-2 mt-1">
+              {msg.editedAt && <span className={`text-[9px] ${isMe ? "text-off-white/40" : "text-dark-purple/30"}`}>edited</span>}
+              <span className={`text-[10px] ${isMe ? "text-off-white/50" : "text-dark-purple/40"}`}>{formatTime(new Date(msg.createdAt))}</span>
+            </div>
+          </div>
+        )}
+        {isMe && editingMsgId !== msg._id && !msg.isDeleted && (
+          <div className={`absolute top-0 ${isMe ? "left-0 -translate-x-full pl-2" : "right-0 translate-x-full pr-2"} hidden group-hover:flex items-center gap-1`}>
+            <button onClick={() => handleEditStart(msg)} className="w-6 h-6 rounded-md bg-off-white shadow-sm border border-gray/20 flex items-center justify-center hover:bg-light-gray transition-colors" aria-label="Edit message">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-dark-purple/60"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+            </button>
+            <button onClick={() => setDeleteMsgId(msg._id)} className="w-6 h-6 rounded-md bg-off-white shadow-sm border border-gray/20 flex items-center justify-center hover:bg-red/10 transition-colors" aria-label="Delete message">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-red/60"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+            </button>
+          </div>
+        )}
       </div>
     )
   }
@@ -650,6 +735,37 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
               aria-label="Close preview"
             >
               <X size="16" className="text-off-white" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {deleteMsgId && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center"
+          onClick={() => setDeleteMsgId(null)}
+        >
+          <div className="bg-off-white rounded-2xl w-72 shadow-xl p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-bold text-dark-purple mb-2">Delete message?</h3>
+            <div className="space-y-1.5 mt-4">
+              <button
+                onClick={() => handleDelete(deleteMsgId, "me")}
+                className="w-full py-2.5 rounded-lg bg-light-gray hover:bg-gray/30 text-sm font-semibold text-dark-purple transition-colors"
+              >
+                Delete for me
+              </button>
+              <button
+                onClick={() => handleDelete(deleteMsgId, "everyone")}
+                className="w-full py-2.5 rounded-lg bg-red/10 hover:bg-red/20 text-sm font-semibold text-red transition-colors"
+              >
+                Delete for everyone
+              </button>
+            </div>
+            <button
+              onClick={() => setDeleteMsgId(null)}
+              className="w-full mt-2 py-2 rounded-lg text-xs text-dark-purple/50 hover:text-dark-purple transition-colors"
+            >
+              Cancel
             </button>
           </div>
         </div>

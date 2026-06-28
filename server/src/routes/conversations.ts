@@ -204,4 +204,61 @@ router.post("/:id/messages", async (req: AuthRequest, res: Response) => {
   }
 })
 
+router.put("/:id/messages/:msgId", async (req: AuthRequest, res: Response) => {
+  try {
+    const message = await Message.findById(req.params.msgId)
+    if (!message) { res.status(404).json({ error: "Message not found" }); return }
+    if (message.senderId !== req.userId) { res.status(403).json({ error: "Not your message" }); return }
+    if (message.type !== "text") { res.status(400).json({ error: "Only text messages can be edited" }); return }
+
+    message.content = req.body.content
+    message.editedAt = new Date()
+    await message.save()
+
+    // Update conversation lastMessage if this was the latest
+    const conversation = await Conversation.findById(req.params.id)
+    if (conversation && conversation.lastMessageTime?.getTime() === message.createdAt.getTime()) {
+      conversation.lastMessage = message.content
+      await conversation.save()
+    }
+
+    res.json({ message })
+  } catch {
+    res.status(500).json({ error: "Server error" })
+  }
+})
+
+router.delete("/:id/messages/:msgId", async (req: AuthRequest, res: Response) => {
+  try {
+    const message = await Message.findById(req.params.msgId)
+    if (!message) { res.status(404).json({ error: "Message not found" }); return }
+    if (message.senderId !== req.userId) { res.status(403).json({ error: "Not your message" }); return }
+
+    const mode = req.query.mode as string
+
+    if (mode === "everyone") {
+      message.isDeleted = true
+      message.content = ""
+      await message.save()
+    } else {
+      // "me" mode — we handle deletion on the client side by filtering
+      res.json({ ok: true, mode: "me" })
+      return
+    }
+
+    // Update conversation lastMessage if this was the latest
+    const conversation = await Conversation.findById(req.params.id)
+    if (conversation && conversation.lastMessageTime?.getTime() === message.createdAt.getTime()) {
+      const previous = await Message.findOne({ conversationId: req.params.id, _id: { $ne: req.params.msgId } }).sort({ createdAt: -1 })
+      conversation.lastMessage = previous?.content || ""
+      conversation.lastMessageTime = previous?.createdAt
+      await conversation.save()
+    }
+
+    res.json({ message, mode: "everyone" })
+  } catch {
+    res.status(500).json({ error: "Server error" })
+  }
+})
+
 export default router

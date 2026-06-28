@@ -94,7 +94,6 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
   const [scheduleTheirEmail, setScheduleTheirEmail] = useState("")
   const [scheduling, setScheduling] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState("")
 
   useEffect(() => {
     let failed = false
@@ -347,7 +346,7 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setShowResults(true) }}
             onFocus={() => setShowResults(true)}
-            onBlur={() => setShowResults(false)}
+            onBlur={() => setTimeout(() => setShowResults(false), 150)}
             placeholder="Search users, tasks, contacts..."
             className="w-full bg-light-gray text-dark-purple text-sm pl-10 pr-4 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-dark-purple/10 focus:bg-off-white transition-all placeholder:text-dark-purple/25"
           />

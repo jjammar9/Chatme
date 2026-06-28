@@ -257,6 +257,7 @@ export default function MessagePanel({ selectedConversationId, onSelectConversat
   const [loading, setLoading] = useState(true)
   const [showNewMsg, setShowNewMsg] = useState(false)
   const [showCreateGroup, setShowCreateGroup] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
   const currentUserId = localStorage.getItem("userId") || ""
 
   const fetchConversations = useCallback(async () => {
@@ -306,6 +307,12 @@ export default function MessagePanel({ selectedConversationId, onSelectConversat
 
   const favourites = convList.filter((c) => c.isFavourite)
   const all = convList
+  const filteredAll = searchQuery.trim()
+    ? all.filter((c) => getDisplayName(c).toLowerCase().includes(searchQuery.toLowerCase()))
+    : all
+  const filteredFavourites = searchQuery.trim()
+    ? favourites.filter((c) => getDisplayName(c).toLowerCase().includes(searchQuery.toLowerCase()))
+    : favourites
 
   return (
     <>
@@ -331,6 +338,8 @@ export default function MessagePanel({ selectedConversationId, onSelectConversat
             <input
               type="text"
               placeholder="Search or start a message"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-9 rounded-lg bg-light-gray pl-3 pr-9 text-sm text-dark-purple placeholder:text-dark-purple/40 outline-none"
               aria-label="Search messages"
             />
@@ -340,20 +349,25 @@ export default function MessagePanel({ selectedConversationId, onSelectConversat
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex justify-center py-10"><Loader size="20" className="animate-spin text-dark-purple/30" /></div>
-          ) : all.length === 0 ? (
+          ) : all.length === 0 && !searchQuery.trim() ? (
             <div className="flex flex-col items-center justify-center py-10 px-5 text-center">
               <MessageCircle size="32" className="text-dark-purple/20 mb-3" />
               <p className="text-sm font-bold text-dark-purple/40">No messages yet</p>
               <p className="text-xs text-dark-purple/30 mt-1">Press + to start a new conversation</p>
             </div>
+          ) : filteredAll.length === 0 && searchQuery.trim() ? (
+            <div className="flex flex-col items-center justify-center py-10 px-5 text-center">
+              <Search size="28" className="text-dark-purple/20 mb-3" />
+              <p className="text-sm font-bold text-dark-purple/40">No conversations matching "{searchQuery}"</p>
+            </div>
           ) : (
             <>
-              {favourites.length > 0 && (
+              {filteredFavourites.length > 0 && (
                 <>
                   <div className="flex items-center pl-5 pr-1 pb-2">
                     <span className="text-xs font-extrabold text-dark-purple/40 uppercase tracking-widest">Favourites</span>
                   </div>
-                  {favourites.map((conv) => (
+                  {filteredFavourites.map((conv) => (
                     <ChatItem key={conv._id} conv={conv} selected={selectedConversationId === conv._id} onSelect={handleSelect} />
                   ))}
                   <div className="my-3 mx-5 border-t border-light-gray" />
@@ -363,7 +377,7 @@ export default function MessagePanel({ selectedConversationId, onSelectConversat
                 <span className="text-lg font-bold text-dark-purple">All Chats</span>
                 <ExternalLink size={16} className="ml-1.5 text-dark-purple" />
               </div>
-              {all.map((conv) => (
+              {filteredAll.map((conv) => (
                 <ChatItem key={conv._id} conv={conv} selected={selectedConversationId === conv._id} onSelect={handleSelect} />
               ))}
             </>

@@ -12,6 +12,8 @@ export interface IMessage extends Document {
   fileName?: string
   fileSize?: number
   fileMimeType?: string
+  editedAt?: Date
+  isDeleted: boolean
   createdAt: Date
 }
 
@@ -27,6 +29,8 @@ const messageSchema = new Schema<IMessage>({
   fileName: { type: String },
   fileSize: { type: Number },
   fileMimeType: { type: String },
+  editedAt: { type: Date },
+  isDeleted: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
 })
 

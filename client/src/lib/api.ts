@@ -140,4 +140,8 @@ export const conversations = {
     fetch(`${BASE}/conversations/${id}/read`, { method: "PUT", headers: headers() }).then(handleResponse),
   toggleFavourite: (id: string) =>
     fetch(`${BASE}/conversations/${id}/favourite`, { method: "PUT", headers: headers() }).then(handleResponse),
+  editMessage: (convId: string, msgId: string, content: string) =>
+    fetch(`${BASE}/conversations/${convId}/messages/${msgId}`, { method: "PUT", headers: headers(), body: JSON.stringify({ content }) }).then(handleResponse),
+  deleteMessage: (convId: string, msgId: string, mode: "me" | "everyone") =>
+    fetch(`${BASE}/conversations/${convId}/messages/${msgId}?mode=${mode}`, { method: "DELETE", headers: headers() }).then(handleResponse),
 }

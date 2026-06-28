@@ -32,5 +32,7 @@ export interface Message {
   fileName?: string
   fileSize?: number
   fileMimeType?: string
+  editedAt?: string
+  isDeleted?: boolean
   createdAt: string
 }
