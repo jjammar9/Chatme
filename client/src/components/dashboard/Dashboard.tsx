@@ -160,7 +160,7 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
     : []
 
   const stats = [
-    { label: "Messages", value: String(totalUnread), icon: MessageSquare, color: "bg-red", change: totalUnread > 0 ? `${totalUnread} unread` : "All clear" },
+    { label: "Messages", value: String(totalUnread), icon: MessageSquare, color: "bg-rose", change: totalUnread > 0 ? `${totalUnread} unread` : "All clear" },
     { label: "Contacts", value: String(contacts.length), icon: Users, color: "bg-light-green", change: contacts.length > 0 ? `${contacts.length} total` : "No contacts yet" },
     { label: "Tasks", value: String(tasks.length), icon: ClipboardList, color: "bg-dark-purple/10", change: tasks.length > 0 ? `${tasks.filter((t) => t.status === "todo").length} unfinished` : "No tasks yet" },
     { label: "Favourites", value: String(contacts.filter((c) => c.favorite).length), icon: FileText, color: "bg-green/20", change: contacts.filter((c) => c.favorite).length > 0 ? "favourite contacts" : "No favourites yet" },
@@ -418,7 +418,7 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
                   <p className="text-xs text-dark-purple/50 mt-2">{s.label}</p>
                 </div>
                 <span className={`w-10 h-10 rounded-xl ${s.color} flex items-center justify-center mt-0.5`}>
-                  <s.icon size={18} className="text-off-white" />
+                  <s.icon size={18} className="text-dark-purple" />
                 </span>
               </div>
               <p className={`text-[10px] font-semibold mt-3 ${s.change === "All clear" ? "text-green" : "text-dark-purple/40"}`}>{s.change}</p>
