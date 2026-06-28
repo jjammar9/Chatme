@@ -166,7 +166,7 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
     { label: "Contacts", value: String(contacts.length), icon: Users, color: "bg-light-green", change: contacts.length > 0 ? `${contacts.length} total` : "No contacts yet" },
     { label: "Tasks", value: String(tasks.length), icon: ClipboardList, color: "bg-dark-purple/10", change: tasks.length > 0 ? `${tasks.filter((t) => t.status === "todo").length} unfinished` : "No tasks yet" },
     { label: "Favourites", value: String(contacts.filter((c) => c.favorite).length), icon: FileText, color: "bg-green/20", change: contacts.filter((c) => c.favorite).length > 0 ? "favourite contacts" : "No favourites yet" },
-    { label: "Groups", value: String(groupCount), icon: UserPlus, color: "bg-dark-purple/15", change: groupCount > 0 ? `${groupCount} total` : "No groups yet" },
+    { label: "Groups", value: String(groupCount), icon: UserPlus, color: "bg-gray/40", change: groupCount > 0 ? `${groupCount} total` : "No groups yet" },
   ]
 
   const continueTasks = tasks.filter((t) => t.status === "todo").slice(0, 4)
