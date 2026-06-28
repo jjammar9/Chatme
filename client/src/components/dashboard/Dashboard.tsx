@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react"
-import { MessageSquare, Users, FileText, UserPlus, Send, Camera, MapPin, Calendar, ClipboardList, Search, Clock, Sparkles, X, Bot, SendHorizonal } from "lucide-react"
+import { MessageSquare, Users, FileText, UserPlus, Send, Camera, MapPin, Calendar, ClipboardList, Search, Clock, Sparkles, X, Bot, SendHorizonal, Loader, ArrowRight } from "lucide-react"
 import { mockCommunities } from "../../data/mock"
-import { tasks as tasksApi, contacts as contactsApi, users as usersApi } from "../../lib/api"
+import { tasks as tasksApi, contacts as contactsApi, users as usersApi, conversations as conversationsApi, upload as uploadApi, calendar as calendarApi } from "../../lib/api"
 import { useToast } from "../../context/ToastContext"
 import Avatar from "../ui/Avatar"
 import { getAvatarUrl, formatTime } from "../../lib/utils"
-import type { Task, UserSearchResult } from "../../types"
+import type { Task, UserSearchResult, Contact } from "../../types"
 
 const activities: { user: string; action: string; time: string; seed: string }[] = []
 
@@ -72,12 +72,51 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
   const [chatMsg, setChatMsg] = useState("")
   const [chatHistory, setChatHistory] = useState<{ role: "user" | "bot"; text: string }[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
-  const [contacts, setContacts] = useState<{ name: string; online: boolean; favorite: boolean; role: string; seed: string }[]>([])
+  const [contacts, setContacts] = useState<Contact[]>([])
   const [userResults, setUserResults] = useState<UserSearchResult[]>([])
+  const [totalUnread, setTotalUnread] = useState(0)
+  const [showNewMsg, setShowNewMsg] = useState(false)
+  const [newMsgContact, setNewMsgContact] = useState<Contact | null>(null)
+  const [newMsgText, setNewMsgText] = useState("")
+  const [sendingMsg, setSendingMsg] = useState(false)
+  const [showSharePhoto, setShowSharePhoto] = useState(false)
+  const [sharePhotoContact, setSharePhotoContact] = useState<Contact | null>(null)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [showSendLocation, setShowSendLocation] = useState(false)
+  const [sendLocationContact, setSendLocationContact] = useState<Contact | null>(null)
+  const [locationText, setLocationText] = useState("")
+  const [sendingLocation, setSendingLocation] = useState(false)
+  const [showSchedule, setShowSchedule] = useState(false)
+  const [scheduleContact, setScheduleContact] = useState<Contact | null>(null)
+  const [scheduleTitle, setScheduleTitle] = useState("")
+  const [scheduleDate, setScheduleDate] = useState("")
+  const [scheduleStartTime, setScheduleStartTime] = useState("")
+  const [scheduleEndTime, setScheduleEndTime] = useState("")
+  const [scheduleMyEmail, setScheduleMyEmail] = useState("")
+  const [scheduleTheirEmail, setScheduleTheirEmail] = useState("")
+  const [scheduling, setScheduling] = useState(false)
 
   useEffect(() => {
     tasksApi.list().then((data) => setTasks(data.tasks.map((t: Record<string, string>) => ({ ...t, dueDate: new Date(t.dueDate) })))).catch(() => {})
     contactsApi.list().then((data) => setContacts(data.contacts)).catch(() => {})
+    conversationsApi.list().then((data) => {
+      const convs = data.conversations || []
+      const sum = convs.reduce((acc: number, c: any) => acc + (c.unreadCount || 0), 0)
+      setTotalUnread(sum)
+    }).catch(() => {})
+  }, [])
+
+  // Re-fetch total unread on custom event
+  useEffect(() => {
+    const handler = () => {
+      conversationsApi.list().then((data) => {
+        const convs = data.conversations || []
+        const sum = convs.reduce((acc: number, c: any) => acc + (c.unreadCount || 0), 0)
+        setTotalUnread(sum)
+      }).catch(() => {})
+    }
+    window.addEventListener("unread-cleared", handler)
+    return () => window.removeEventListener("unread-cleared", handler)
   }, [])
 
   const welcomeShown = useRef(false)
@@ -100,6 +139,7 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
   const hour = now.getHours()
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"
   const userName = JSON.parse(localStorage.getItem("user") || "{}").name || "User"
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}")
 
   const allSearchData = [
     ...tasks.map((t) => ({ label: t.title, category: "Task", seed: t.seed })),
@@ -112,10 +152,10 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
     : []
 
   const stats = [
-    { label: "Messages", value: "0", icon: MessageSquare, color: "bg-rose", change: "No messages yet" },
-    { label: "Online", value: String(contacts.filter((c) => c.online).length), icon: Users, color: "bg-light-green", change: "contacts online" },
+    { label: "Messages", value: String(totalUnread), icon: MessageSquare, color: "bg-rose", change: totalUnread > 0 ? `unread` : "No unread messages" },
+    { label: "Contacts", value: String(contacts.length), icon: Users, color: "bg-light-green", change: contacts.length > 0 ? `${contacts.length} total` : "No contacts yet" },
     { label: "Tasks", value: String(tasks.length), icon: ClipboardList, color: "bg-dark-purple/10", change: tasks.length > 0 ? `${tasks.filter((t) => t.status === "todo").length} unfinished` : "No tasks yet" },
-    { label: "Contacts", value: String(contacts.length), icon: FileText, color: "bg-green/20", change: contacts.length > 0 ? String(contacts.filter((c) => c.online).length) + " online" : "No contacts yet" },
+    { label: "Favourites", value: String(contacts.filter((c) => c.favorite).length), icon: FileText, color: "bg-green/20", change: contacts.filter((c) => c.favorite).length > 0 ? "favourite contacts" : "No favourites yet" },
     { label: "Groups", value: "0", icon: UserPlus, color: "bg-rose/40", change: "No groups yet" },
   ]
 
@@ -132,6 +172,123 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
       setUserResults([])
       setSearchQuery("")
     } catch { toast("Failed to add contact", "error") }
+  }
+
+  const handleNewMessageSend = async () => {
+    if (!newMsgContact?.linkedUserId || !newMsgText.trim() || sendingMsg) return
+    setSendingMsg(true)
+    try {
+      const data = await conversationsApi.create({ participants: [newMsgContact.linkedUserId] })
+      if (data.conversation) {
+        const currentUserData = JSON.parse(localStorage.getItem("user") || "{}")
+        await conversationsApi.sendMessage(data.conversation._id, {
+          content: newMsgText.trim(),
+          senderName: currentUserData.name || "You",
+          senderSeed: currentUserData.avatarSeed || currentUserData.username || currentUserData.name || "user",
+          type: "text",
+        })
+        toast(`Message sent to ${newMsgContact.name}`, "success")
+      }
+    } catch {
+      toast("Failed to send message", "error")
+    }
+    setSendingMsg(false)
+    setShowNewMsg(false)
+    setNewMsgContact(null)
+    setNewMsgText("")
+  }
+
+  const handleSharePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !sharePhotoContact?.linkedUserId || uploadingPhoto) return
+    setUploadingPhoto(true)
+    try {
+      const data = await uploadApi.file(file)
+      const conv = await conversationsApi.create({ participants: [sharePhotoContact.linkedUserId] })
+      if (conv.conversation) {
+        const currentUserData = JSON.parse(localStorage.getItem("user") || "{}")
+        await conversationsApi.sendMessage(conv.conversation._id, {
+          content: data.url,
+          senderName: currentUserData.name || "You",
+          senderSeed: currentUserData.avatarSeed || currentUserData.username || currentUserData.name || "user",
+          type: "image",
+          fileUrl: data.url,
+          fileName: data.filename,
+          fileSize: data.size,
+          fileMimeType: data.mimetype,
+        })
+        toast(`Photo sent to ${sharePhotoContact.name}`, "success")
+      }
+    } catch { toast("Failed to share photo", "error") }
+    setUploadingPhoto(false)
+    setShowSharePhoto(false)
+    setSharePhotoContact(null)
+    if (e.target) e.target.value = ""
+  }
+
+  const handleSendLocation = async () => {
+    if (!sendLocationContact?.linkedUserId || !locationText.trim() || sendingLocation) return
+    setSendingLocation(true)
+    try {
+      const conv = await conversationsApi.create({ participants: [sendLocationContact.linkedUserId] })
+      if (conv.conversation) {
+        const currentUserData = JSON.parse(localStorage.getItem("user") || "{}")
+        await conversationsApi.sendMessage(conv.conversation._id, {
+          content: `📍 ${locationText.trim()}`,
+          senderName: currentUserData.name || "You",
+          senderSeed: currentUserData.avatarSeed || currentUserData.username || currentUserData.name || "user",
+          type: "text",
+        })
+        toast(`Location sent to ${sendLocationContact.name}`, "success")
+      }
+    } catch { toast("Failed to send location", "error") }
+    setSendingLocation(false)
+    setShowSendLocation(false)
+    setSendLocationContact(null)
+    setLocationText("")
+  }
+
+  const handleSchedule = async () => {
+    if (!scheduleContact?.linkedUserId || !scheduleTitle.trim() || !scheduleDate || !scheduleStartTime || !scheduleEndTime || !scheduleMyEmail.trim() || !scheduleTheirEmail.trim() || scheduling) return
+    setScheduling(true)
+    try {
+      const [y, m, d] = scheduleDate.split("-").map(Number)
+      const [sh, sm] = scheduleStartTime.split(":").map(Number)
+      const [eh, em] = scheduleEndTime.split(":").map(Number)
+      const duration = (eh * 60 + em) - (sh * 60 + sm)
+      if (duration <= 0) { toast("End time must be after start time", "error"); setScheduling(false); return }
+      const result = await calendarApi.createMeeting({
+        contactId: scheduleContact.linkedUserId,
+        title: scheduleTitle.trim(),
+        date: d,
+        month: m,
+        year: y,
+        time: scheduleStartTime,
+        duration,
+        description: `Meeting with ${scheduleContact.name}`,
+        myEmail: scheduleMyEmail.trim(),
+        theirEmail: scheduleTheirEmail.trim(),
+      })
+      const md = result?.meetingDetails
+      if (md?.myEmail && md?.theirEmail) {
+        const text = `${md.fromName} invited you to a meeting:\n\nTitle: ${md.title}\nDate: ${md.date}\nTime: ${md.time}\nDuration: ${md.duration} min\n\n---\nSent via Chatme`
+        const subject = encodeURIComponent(`Meeting Invitation: ${md.title}`)
+        const body = encodeURIComponent(text)
+        navigator.clipboard.writeText(text).catch(() => {})
+        window.open(`mailto:${md.theirEmail}?cc=${md.myEmail}&subject=${subject}&body=${body}`)
+        toast("Meeting details copied — paste & send in your email", "info")
+      }
+      toast(`Meeting scheduled with ${scheduleContact.name}`, "success")
+    } catch { toast("Failed to schedule meeting", "error") }
+    setScheduling(false)
+    setShowSchedule(false)
+    setScheduleContact(null)
+    setScheduleTitle("")
+    setScheduleDate("")
+    setScheduleStartTime("")
+    setScheduleEndTime("")
+    setScheduleMyEmail("")
+    setScheduleTheirEmail("")
   }
 
   const handleChatSend = () => {
@@ -285,11 +442,11 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
                   { icon: Send, color: "bg-dark-purple", label: "New Message" },
                   { icon: Camera, color: "bg-rose", label: "Share Photo" },
                   { icon: MapPin, color: "bg-light-green", label: "Send Location" },
-                  { icon: Calendar, color: "bg-dark-purple/10", label: "Schedule Meet" },
+                  { icon: Calendar, color: "bg-dark-purple/10", label: "Schedule Meeting" },
                 ].map((action, i) => {
                   const AIcon = action.icon
                   return (
-                    <button key={i} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-light-gray hover:bg-gray/30 transition-colors text-left">
+                    <button key={i} onClick={action.label === "New Message" ? () => setShowNewMsg(true) : action.label === "Share Photo" ? () => setShowSharePhoto(true) : action.label === "Send Location" ? () => setShowSendLocation(true) : action.label === "Schedule Meeting" ? () => setShowSchedule(true) : undefined} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-light-gray hover:bg-gray/30 transition-colors text-left">
                       <span className={`w-7 h-7 rounded-md ${action.color} flex items-center justify-center`}>
                         <AIcon size={12} className={action.color === "bg-dark-purple" ? "text-off-white" : "text-dark-purple"} />
                       </span>
@@ -381,6 +538,290 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
               />
               <button onClick={handleChatSend} aria-label="Send message" className="p-1 rounded-lg hover:bg-dark-purple/10 transition-colors">
                 <SendHorizonal size={16} className="text-dark-purple/60" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showNewMsg && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center" onClick={() => { setShowNewMsg(false); setNewMsgContact(null); setNewMsgText("") }}>
+          <div className="bg-off-white rounded-2xl w-[50vw] max-w-2xl shadow-xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-light-gray">
+              <h3 className="text-lg font-bold text-dark-purple">New Message</h3>
+              <button onClick={() => { setShowNewMsg(false); setNewMsgContact(null); setNewMsgText("") }} aria-label="Close"><X size="18" className="text-dark-purple/50" /></button>
+            </div>
+            <div className="p-5 border-b border-light-gray">
+              <p className="text-xs font-bold text-dark-purple/40 uppercase tracking-wider mb-3">Select Contact</p>
+              <div className="max-h-52 overflow-y-auto space-y-1.5">
+                {contacts.length === 0 ? (
+                  <p className="text-sm text-dark-purple/40 py-6 text-center">No contacts yet</p>
+                ) : contacts.map((c) => (
+                  <div
+                    key={c._id || c.linkedUserId}
+                    onClick={() => setNewMsgContact(c)}
+                    className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${newMsgContact?._id === c._id ? "bg-light-gray" : "hover:bg-light-gray/50"}`}
+                  >
+                    <Avatar seed={c.seed || c.name} size="md" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-dark-purple truncate">{c.name}</p>
+                    </div>
+                    {c.online && <span className="w-2 h-2 rounded-full bg-green shrink-0" />}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="p-5">
+              <p className="text-xs font-bold text-dark-purple/40 uppercase tracking-wider mb-3">
+                Message {newMsgContact ? `to ${newMsgContact.name}` : ""}
+              </p>
+              <textarea
+                value={newMsgText}
+                onChange={(e) => setNewMsgText(e.target.value)}
+                placeholder="Type your message..."
+                rows={4}
+                className="w-full rounded-lg bg-light-gray p-3 text-sm text-dark-purple placeholder:text-dark-purple/40 outline-none resize-none"
+              />
+              <button
+                onClick={handleNewMessageSend}
+                disabled={!newMsgContact || !newMsgText.trim() || sendingMsg}
+                className="w-full mt-4 h-10 rounded-lg bg-dark-purple flex items-center justify-center gap-2 hover:bg-deep-purple transition-colors text-off-white text-sm font-bold disabled:opacity-40"
+              >
+                {sendingMsg ? <Loader size="14" className="animate-spin" /> : <Send size="14" />}
+                Send Message
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSharePhoto && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center" onClick={() => { setShowSharePhoto(false); setSharePhotoContact(null) }}>
+          <div className="bg-off-white rounded-2xl w-[50vw] max-w-2xl shadow-xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-light-gray">
+              <h3 className="text-lg font-bold text-dark-purple">Share Photo</h3>
+              <button onClick={() => { setShowSharePhoto(false); setSharePhotoContact(null) }} aria-label="Close"><X size="18" className="text-dark-purple/50" /></button>
+            </div>
+            <div className="p-5 border-b border-light-gray">
+              <p className="text-xs font-bold text-dark-purple/40 uppercase tracking-wider mb-3">Send to</p>
+              <div className="max-h-52 overflow-y-auto space-y-1.5">
+                {contacts.length === 0 ? (
+                  <p className="text-sm text-dark-purple/40 py-6 text-center">No contacts yet</p>
+                ) : contacts.map((c) => (
+                  <div
+                    key={c._id || c.linkedUserId}
+                    onClick={() => setSharePhotoContact(c)}
+                    className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${sharePhotoContact?._id === c._id ? "bg-light-gray" : "hover:bg-light-gray/50"}`}
+                  >
+                    <Avatar seed={c.seed || c.name} size="md" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-dark-purple truncate">{c.name}</p>
+                    </div>
+                    {c.online && <span className="w-2 h-2 rounded-full bg-green shrink-0" />}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="p-5">
+              <p className="text-xs font-bold text-dark-purple/40 uppercase tracking-wider mb-3">
+                {sharePhotoContact ? `Photo to ${sharePhotoContact.name}` : "Select a contact first"}
+              </p>
+              <label className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-light-gray p-8 cursor-pointer hover:border-dark-purple/30 transition-colors ${!sharePhotoContact ? "opacity-40 pointer-events-none" : ""}`}>
+                <Camera size="28" className="text-dark-purple/30 mb-2" />
+                <span className="text-sm text-dark-purple/50">Click to choose a photo</span>
+                <input type="file" accept="image/*" className="hidden" onChange={handleSharePhoto} disabled={!sharePhotoContact || uploadingPhoto} />
+              </label>
+              {uploadingPhoto && (
+                <div className="flex items-center justify-center gap-2 mt-3">
+                  <Loader size="14" className="animate-spin text-dark-purple" />
+                  <span className="text-sm text-dark-purple/60">Uploading...</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSendLocation && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center" onClick={() => { setShowSendLocation(false); setSendLocationContact(null); setLocationText("") }}>
+          <div className="bg-off-white rounded-2xl w-[50vw] max-w-2xl shadow-xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-light-gray">
+              <h3 className="text-lg font-bold text-dark-purple">Send Location</h3>
+              <button onClick={() => { setShowSendLocation(false); setSendLocationContact(null); setLocationText("") }} aria-label="Close"><X size="18" className="text-dark-purple/50" /></button>
+            </div>
+            <div className="p-5 border-b border-light-gray">
+              <p className="text-xs font-bold text-dark-purple/40 uppercase tracking-wider mb-3">Send to</p>
+              <div className="max-h-52 overflow-y-auto space-y-1.5">
+                {contacts.length === 0 ? (
+                  <p className="text-sm text-dark-purple/40 py-6 text-center">No contacts yet</p>
+                ) : contacts.map((c) => (
+                  <div
+                    key={c._id || c.linkedUserId}
+                    onClick={() => setSendLocationContact(c)}
+                    className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${sendLocationContact?._id === c._id ? "bg-light-gray" : "hover:bg-light-gray/50"}`}
+                  >
+                    <Avatar seed={c.seed || c.name} size="md" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-dark-purple truncate">{c.name}</p>
+                    </div>
+                    {c.online && <span className="w-2 h-2 rounded-full bg-green shrink-0" />}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="p-5">
+              <p className="text-xs font-bold text-dark-purple/40 uppercase tracking-wider mb-3">
+                {sendLocationContact ? `Location to ${sendLocationContact.name}` : "Select a contact first"}
+              </p>
+              <div className="rounded-lg bg-light-gray p-4 mb-3 flex items-center justify-center">
+                <MapPin size="32" className="text-dark-purple/30" />
+                <span className="text-sm text-dark-purple/40 ml-2">📍 Share a place or address</span>
+              </div>
+              <input
+                value={locationText}
+                onChange={(e) => setLocationText(e.target.value)}
+                placeholder="Enter location name or address..."
+                className="w-full rounded-lg bg-light-gray p-3 text-sm text-dark-purple placeholder:text-dark-purple/40 outline-none"
+                disabled={!sendLocationContact}
+              />
+              <button
+                onClick={handleSendLocation}
+                disabled={!sendLocationContact || !locationText.trim() || sendingLocation}
+                className="w-full mt-4 h-10 rounded-lg bg-dark-purple flex items-center justify-center gap-2 hover:bg-deep-purple transition-colors text-off-white text-sm font-bold disabled:opacity-40"
+              >
+                {sendingLocation ? <Loader size="14" className="animate-spin" /> : <MapPin size="14" />}
+                Send Location
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSchedule && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center" onClick={() => { setShowSchedule(false); setScheduleContact(null); setScheduleTitle(""); setScheduleDate(""); setScheduleStartTime(""); setScheduleEndTime(""); setScheduleMyEmail(""); setScheduleTheirEmail("") }}>
+          <div className="bg-off-white rounded-2xl w-[50vw] max-w-2xl shadow-xl max-h-[95vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-light-gray shrink-0">
+              <h3 className="text-lg font-bold text-dark-purple">Schedule Meeting</h3>
+              <button onClick={() => { setShowSchedule(false); setScheduleContact(null); setScheduleTitle(""); setScheduleDate(""); setScheduleStartTime(""); setScheduleEndTime(""); setScheduleMyEmail(""); setScheduleTheirEmail("") }} aria-label="Close"><X size="18" className="text-dark-purple/50" /></button>
+            </div>
+            <div className="p-5 border-b border-light-gray">
+              <p className="text-xs font-bold text-dark-purple/40 uppercase tracking-wider mb-3">With</p>
+              <div className="max-h-40 overflow-y-auto space-y-1.5">
+                {contacts.length === 0 ? (
+                  <p className="text-sm text-dark-purple/40 py-6 text-center">No contacts yet</p>
+                ) : contacts.map((c) => (
+                  <div
+                    key={c._id || c.linkedUserId}
+                    onClick={() => { setScheduleContact(c); if (!scheduleTitle.trim()) setScheduleTitle(`Meeting with ${c.name}`) }}
+                    className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${scheduleContact?._id === c._id ? "bg-light-gray" : "hover:bg-light-gray/50"}`}
+                  >
+                    <Avatar seed={c.seed || c.name} size="md" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-dark-purple truncate">{c.name}</p>
+                    </div>
+                    {c.online && <span className="w-2 h-2 rounded-full bg-green shrink-0" />}
+                  </div>
+                ))}
+              </div>
+            </div>
+            {scheduleContact && (
+              <div className="px-5 pt-3 pb-1">
+                <div className="flex items-center gap-2 text-sm text-dark-purple bg-light-gray rounded-lg px-4 py-2.5">
+                  <Avatar seed={currentUser.username || currentUser.name || "user"} size="sm" />
+                  <span className="font-semibold">{currentUser.name || "You"}</span>
+                  <ArrowRight size="14" className="text-dark-purple/40 mx-1" />
+                  <Avatar seed={scheduleContact.seed || scheduleContact.name} size="sm" />
+                  <span className="font-semibold">{scheduleContact.name}</span>
+                </div>
+              </div>
+            )}
+            <div className="p-5 space-y-4 overflow-y-auto flex-1">
+              <div>
+                <p className="text-xs font-bold text-dark-purple/40 uppercase tracking-wider mb-2">Title</p>
+                <input
+                  value={scheduleTitle}
+                  onChange={(e) => setScheduleTitle(e.target.value)}
+                  placeholder="Meeting title..."
+                  className="w-full h-10 rounded-lg bg-light-gray px-3 text-sm text-dark-purple placeholder:text-dark-purple/40 outline-none"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-bold text-dark-purple/40 uppercase tracking-wider mb-2">Date</p>
+                  <input
+                    type="date"
+                    value={scheduleDate}
+                    onChange={(e) => setScheduleDate(e.target.value)}
+                    className="w-full h-10 rounded-lg bg-light-gray px-3 text-sm text-dark-purple outline-none"
+                  />
+                </div>
+                <div />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-bold text-dark-purple/40 uppercase tracking-wider mb-2">Start Time</p>
+                  <select
+                    value={scheduleStartTime}
+                    onChange={(e) => { setScheduleStartTime(e.target.value); if (!scheduleEndTime || scheduleEndTime <= e.target.value) setScheduleEndTime(e.target.value) }}
+                    className="w-full h-10 rounded-lg bg-light-gray px-3 text-sm text-dark-purple outline-none appearance-none cursor-pointer"
+                  >
+                    <option value="">Select start</option>
+                    {Array.from({ length: 48 }, (_, i) => {
+                      const h = String(Math.floor(i / 2)).padStart(2, "0")
+                      const m = i % 2 === 0 ? "00" : "30"
+                      const label = `${Math.floor(i / 2) > 12 ? Math.floor(i / 2) - 12 : Math.floor(i / 2) === 0 ? 12 : Math.floor(i / 2)}:${m} ${Math.floor(i / 2) < 12 ? "AM" : "PM"}`
+                      return <option key={i} value={`${h}:${m}`}>{label}</option>
+                    })}
+                  </select>
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-dark-purple/40 uppercase tracking-wider mb-2">End Time</p>
+                  <select
+                    value={scheduleEndTime}
+                    onChange={(e) => setScheduleEndTime(e.target.value)}
+                    className="w-full h-10 rounded-lg bg-light-gray px-3 text-sm text-dark-purple outline-none appearance-none cursor-pointer"
+                  >
+                    <option value="">Select end</option>
+                    {Array.from({ length: 48 }, (_, i) => {
+                      const h = String(Math.floor(i / 2)).padStart(2, "0")
+                      const m = i % 2 === 0 ? "00" : "30"
+                      const val = `${h}:${m}`
+                      const disabled = scheduleStartTime && val <= scheduleStartTime
+                      const label = `${Math.floor(i / 2) > 12 ? Math.floor(i / 2) - 12 : Math.floor(i / 2) === 0 ? 12 : Math.floor(i / 2)}:${m} ${Math.floor(i / 2) < 12 ? "AM" : "PM"}`
+                      return <option key={i} value={val} disabled={!!disabled}>{label}</option>
+                    })}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-bold text-dark-purple/40 uppercase tracking-wider mb-2">Your Email</p>
+                  <input
+                    type="email"
+                    value={scheduleMyEmail}
+                    onChange={(e) => setScheduleMyEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full h-10 rounded-lg bg-light-gray px-3 text-sm text-dark-purple placeholder:text-dark-purple/40 outline-none"
+                  />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-dark-purple/40 uppercase tracking-wider mb-2">Their Email</p>
+                  <input
+                    type="email"
+                    value={scheduleTheirEmail}
+                    onChange={(e) => setScheduleTheirEmail(e.target.value)}
+                    placeholder="participant@example.com"
+                    className="w-full h-10 rounded-lg bg-light-gray px-3 text-sm text-dark-purple placeholder:text-dark-purple/40 outline-none"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={handleSchedule}
+                disabled={!scheduleContact || !scheduleTitle.trim() || !scheduleDate || !scheduleStartTime || !scheduleEndTime || !scheduleMyEmail.trim() || !scheduleTheirEmail.trim() || scheduling}
+                className="w-full mt-1 h-10 rounded-lg bg-dark-purple flex items-center justify-center gap-2 hover:bg-deep-purple transition-colors text-off-white text-sm font-bold disabled:opacity-40"
+              >
+                {scheduling ? <Loader size="14" className="animate-spin" /> : <Calendar size="14" />}
+                Schedule Meeting
               </button>
             </div>
           </div>

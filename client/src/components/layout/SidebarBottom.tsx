@@ -54,7 +54,7 @@ function NotificationsModal({ open, onClose, onViewProfile }: { open: boolean; o
                 <div className="mb-2">
                   <p className="text-[10px] font-semibold text-dark-purple/40 px-3 py-2 uppercase tracking-wider">Pending Requests</p>
                   {pending.map((n) => (
-                    <div key={n._id} className="px-3 py-2.5 mx-1 rounded-lg bg-rose/5 border border-rose/20 mb-1">
+                    <div key={n._id} className="px-3 py-2.5 mx-1 rounded-lg bg-red/5 border border-red/20 mb-1">
                       <div className="flex items-start gap-2.5">
                         <Avatar seed={n.fromUserId} size="sm" />
                         <div className="flex-1 min-w-0">
@@ -192,7 +192,7 @@ export default function SidebarBottom({ onNavChange, onViewProfile }: { onNavCha
             <div className="relative shrink-0">
               <Avatar seed={userData.username || userData.name || "user"} size="md" status="online" />
               {unread > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose text-off-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-dark-purple">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red text-off-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-dark-purple">
                   {unread > 9 ? "9+" : unread}
                 </span>
               )}
@@ -201,7 +201,7 @@ export default function SidebarBottom({ onNavChange, onViewProfile }: { onNavCha
               <p className="text-sm font-bold truncate">{userData.name || "User"}</p>
               <p className="text-[11px] text-off-white/50 truncate shrink-0">@{userData.username || "user"}</p>
             </div>
-            <Bell size="16" className={`shrink-0 transition-colors ${unread > 0 ? "text-rose" : "text-off-white/40"}`} />
+            <Bell size="16" className={`shrink-0 transition-colors ${unread > 0 ? "text-red" : "text-off-white/40"}`} />
           </button>
         </div>
 
@@ -264,7 +264,7 @@ export default function SidebarBottom({ onNavChange, onViewProfile }: { onNavCha
                     <div className="px-2 mb-1">
                       <p className="text-[10px] font-semibold text-dark-purple/40 px-2 py-1 uppercase tracking-wider">Pending Requests</p>
                   {pendingFriendRequests.map((n) => (
-                      <div key={n._id} onClick={() => { setOpen(false); if (n.relatedId) conversationsApi.markRead(n.relatedId).catch(() => {}); onViewProfile(n.fromUserId) }} className="px-3 py-2.5 mx-1 rounded-lg bg-rose/5 border border-rose/20 mb-1 cursor-pointer hover:bg-rose/10 transition-colors">
+                      <div key={n._id} onClick={() => { setOpen(false); if (n.relatedId) conversationsApi.markRead(n.relatedId).catch(() => {}); onViewProfile(n.fromUserId) }} className="px-3 py-2.5 mx-1 rounded-lg bg-red/5 border border-red/20 mb-1 cursor-pointer hover:bg-red/10 transition-colors">
                           <div className="flex items-start gap-2.5">
                             <Avatar seed={n.fromUserId} size="sm" />
                             <div className="flex-1 min-w-0">

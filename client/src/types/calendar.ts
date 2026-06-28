@@ -10,4 +10,6 @@ export interface CalendarEvent {
   location?: string
   description?: string
   attendees?: string[]
+  duration?: number
+  isMeeting?: boolean
 }

@@ -33,7 +33,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((t) => {
           const colors = {
             success: "bg-green text-off-white",
-            error: "bg-rose text-dark-purple",
+            error: "bg-red text-off-white",
             info: "bg-dark-purple text-off-white",
           }
           const icons = {

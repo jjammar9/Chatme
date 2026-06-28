@@ -12,6 +12,8 @@ export interface ICalendarEvent extends Document {
   location?: string
   description?: string
   attendees?: string[]
+  duration?: number
+  isMeeting?: boolean
   createdAt: Date
 }
 
@@ -27,6 +29,8 @@ const calendarEventSchema = new Schema<ICalendarEvent>({
   location: { type: String, default: "" },
   description: { type: String, default: "" },
   attendees: [{ type: String }],
+  duration: { type: Number },
+  isMeeting: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
 })
 

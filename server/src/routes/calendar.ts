@@ -1,5 +1,7 @@
 import { Router, Response } from "express"
 import CalendarEvent from "../models/CalendarEvent"
+import Notification from "../models/Notification"
+import User from "../models/User"
 import { authMiddleware, AuthRequest } from "../middleware/auth"
 
 const router = Router()
@@ -48,6 +50,71 @@ router.delete("/:id", async (req: AuthRequest, res: Response) => {
     if (!event) { res.status(404).json({ error: "Event not found" }); return }
     res.json({ message: "Event deleted" })
   } catch {
+    res.status(500).json({ error: "Server error" })
+  }
+})
+
+router.post("/meeting", async (req: AuthRequest, res: Response) => {
+  try {
+    const { contactId, title, date, month, year, time, duration, description, myEmail, theirEmail } = req.body
+    const sender = await User.findById(req.userId).select("name username email").lean()
+    if (!sender) { res.status(404).json({ error: "User not found" }); return }
+
+    const contact = await User.findById(contactId).select("name username email").lean()
+    if (!contact) { res.status(404).json({ error: "Contact not found" }); return }
+
+    // Create event for current user
+    const myEvent = await CalendarEvent.create({
+      userId: req.userId,
+      date, month, year, title, time,
+      seed: contact.username || contact.name || "",
+      status: "confirmed",
+      location: description || "",
+      description: description || "",
+      attendees: [contactId],
+      duration: duration || 30,
+      isMeeting: true,
+    })
+
+    // Create event for participant
+    const theirEvent = await CalendarEvent.create({
+      userId: contactId,
+      date, month, year, title, time,
+      seed: sender.username || sender.name || "",
+      status: "tentative",
+      location: description || "",
+      description: description || "",
+      attendees: [req.userId!],
+      duration: duration || 30,
+      isMeeting: true,
+    })
+
+    // In-app notification
+    await Notification.create({
+      userId: contactId,
+      type: "meeting",
+      fromUserId: req.userId,
+      message: `${sender.name} invited you to "${title}" on ${month}/${date}/${year} at ${time}`,
+      relatedId: theirEvent._id.toString(),
+    })
+
+    res.status(201).json({
+      event: myEvent,
+      meetingDetails: {
+        title,
+        date: `${month}/${date}/${year}`,
+        time,
+        duration: duration || 30,
+        fromName: sender.name || "Someone",
+        toName: contact.name || contact.username || "there",
+        myEmail,
+        theirEmail,
+      },
+    })
+
+    res.status(201).json({ event: myEvent })
+  } catch (e) {
+    console.error(e)
     res.status(500).json({ error: "Server error" })
   }
 })

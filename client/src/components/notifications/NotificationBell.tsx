@@ -73,7 +73,7 @@ export default function NotificationBell() {
       >
         <Bell size="18" className="text-off-white/60" />
         {unread > 0 && (
-          <span className="absolute top-1 right-1 w-4 h-4 bg-rose text-off-white text-[9px] font-bold rounded-full flex items-center justify-center">
+          <span className="absolute top-1 right-1 w-4 h-4 bg-red text-off-white text-[9px] font-bold rounded-full flex items-center justify-center">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
@@ -100,7 +100,7 @@ export default function NotificationBell() {
           ) : (
             <div className="py-1">
               {notifs.map((n) => (
-                <div key={n._id} className={`px-4 py-2.5 border-b border-light-gray last:border-0 ${!n.read ? "bg-rose/5" : ""}`}>
+                <div key={n._id} className={`px-4 py-2.5 border-b border-light-gray last:border-0 ${!n.read ? "bg-red/5" : ""}`}>
                   <div className="flex items-start gap-2.5">
                     <Avatar seed={n.fromUserId} size="sm" />
                     <div className="flex-1 min-w-0">

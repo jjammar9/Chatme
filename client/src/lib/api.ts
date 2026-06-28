@@ -52,6 +52,8 @@ export const calendar = {
     fetch(`${BASE}/calendar/${id}`, { method: "PUT", headers: headers(), body: JSON.stringify(data) }).then(handleResponse),
   remove: (id: string) =>
     fetch(`${BASE}/calendar/${id}`, { method: "DELETE", headers: headers() }).then(handleResponse),
+  createMeeting: (data: Record<string, unknown>) =>
+    fetch(`${BASE}/calendar/meeting`, { method: "POST", headers: headers(), body: JSON.stringify(data) }).then((r) => r.json()),
 }
 
 // Contacts
