@@ -2,6 +2,7 @@ export interface ParticipantDetail {
   name: string
   username: string
   avatarSeed: string
+  online?: boolean
 }
 
 export interface Conversation {

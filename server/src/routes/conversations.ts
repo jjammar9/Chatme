@@ -26,11 +26,11 @@ router.get("/", async (req: AuthRequest, res: Response) => {
 
     // Fetch user details for all participants in one query
     const users = await User.find({ _id: { $in: Array.from(allIds) } })
-      .select("name username avatarSeed").lean()
+      .select("name username avatarSeed online").lean()
 
-    const userMap: Record<string, { name: string; username: string; avatarSeed: string }> = {}
+    const userMap: Record<string, { name: string; username: string; avatarSeed: string; online: boolean }> = {}
     for (const u of users) {
-      userMap[u._id.toString()] = { name: u.name || "Unknown", username: u.username || "", avatarSeed: u.avatarSeed || u.name || u.username || "" }
+      userMap[u._id.toString()] = { name: u.name || "Unknown", username: u.username || "", avatarSeed: u.avatarSeed || u.name || u.username || "", online: u.online || false }
     }
 
     // Fetch unread counts for all conversations

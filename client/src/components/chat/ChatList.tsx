@@ -37,6 +37,7 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
   const [searchTab, setSearchTab] = useState<"messages" | "files" | "media" | "voice">("messages")
   const [recordingDuration, setRecordingDuration] = useState(0)
   const [playingVoice, setPlayingVoice] = useState<string | null>(null)
+  const [voiceProgress, setVoiceProgress] = useState<Record<string, number>>({})
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const recordedChunksRef = useRef<Blob[]>([])
   const recordingTimerRef = useRef<ReturnType<typeof setInterval>>()
@@ -121,6 +122,21 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
 
   const handleSend = async () => {
     if (!text.trim() || !convId || sending) return
+    const tempId = `temp-${Date.now()}`
+    const optimisticMsg: Message = {
+      _id: tempId,
+      conversationId: convId,
+      senderId: currentUserId,
+      senderName: currentUserData.name || "You",
+      senderSeed: currentUserData.avatarSeed || currentUserData.username || currentUserData.name || "user",
+      content: text.trim(),
+      type: "text",
+      readBy: [currentUserId],
+      createdAt: new Date().toISOString(),
+    }
+    setMessages((prev) => [...prev, optimisticMsg])
+    setText("")
+    setShowEmoji(false)
     setSending(true)
     try {
       const data = await conversations.sendMessage(convId, {
@@ -130,12 +146,11 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
         type: "text",
       })
       if (data.message) {
-        setMessages((prev) => [...prev, data.message])
-        setText("")
-        setShowEmoji(false)
+        setMessages((prev) => prev.map((m) => m._id === tempId ? data.message : m))
       }
     } catch (e) {
       console.error("Failed to send message", e)
+      setMessages((prev) => prev.filter((m) => m._id !== tempId))
     }
     setSending(false)
   }
@@ -281,10 +296,14 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
     } else {
       audioRef.current?.pause()
       const audio = new Audio(url)
-      audio.onended = () => { setPlayingVoice(null); audioRef.current = null }
+      audio.ontimeupdate = () => {
+        if (audio.duration) setVoiceProgress((prev) => ({ ...prev, [url]: audio.currentTime / audio.duration }))
+      }
+      audio.onended = () => { setPlayingVoice(null); setVoiceProgress((prev) => ({ ...prev, [url]: 0 })); audioRef.current = null }
       audio.play().catch(() => {})
       audioRef.current = audio
       setPlayingVoice(url)
+      setVoiceProgress((prev) => ({ ...prev, [url]: 0 }))
     }
   }
 
@@ -301,6 +320,9 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
                 alt="Shared image"
                 className="max-w-[250px] max-h-[300px] rounded-xl object-cover cursor-pointer"
                 onClick={() => setPreviewUrl(msg.fileUrl || msg.content)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPreviewUrl(msg.fileUrl || msg.content) } }}
+                tabIndex={0}
+                role="button"
               />
               <button
                 onClick={() => handleDownload(msg.fileUrl || msg.content, msg.fileName || "image")}
@@ -359,9 +381,9 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
                 {isPlaying ? <Pause size="14" className={isMe ? "text-off-white" : "text-dark-purple"} /> : <Play size="14" className={isMe ? "text-off-white" : "text-dark-purple"} />}
               </button>
               <div className="w-24 h-1.5 rounded-full bg-black/10 relative overflow-hidden">
-                <div className={`h-full rounded-full ${isMe ? "bg-off-white/50" : "bg-dark-purple/30"} transition-all`} style={{ width: "0%" }} />
+                <div className={`h-full rounded-full ${isMe ? "bg-off-white/50" : "bg-dark-purple/30"} transition-all`} style={{ width: `${(voiceProgress[msg.fileUrl || msg.content] || 0) * 100}%` }} />
               </div>
-              <span className={`text-[10px] ${isMe ? "text-off-white/50" : "text-dark-purple/40"} min-w-[30px]`}>{duration > 0 ? `${duration}s` : "..."}</span>
+              <span className={`text-[10px] ${isMe ? "text-off-white/50" : "text-dark-purple/40"} min-w-[30px] tabular-nums`}>{isPlaying && voiceProgress[msg.fileUrl || msg.content] ? `${Math.round((voiceProgress[msg.fileUrl || msg.content] || 0) * (duration || 1))}s` : duration > 0 ? `${duration}s` : "..."}</span>
             </div>
             <span className={`text-[10px] ${isMe ? "text-off-white/50" : "text-dark-purple/40"} text-right block mt-1`}>
               {formatTime(new Date(msg.createdAt))}
@@ -569,7 +591,7 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
               ) : (
                 <div className="space-y-1">
                   {searchResults[searchTab].map((msg: Message) => (
-                    <div key={msg._id} className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-light-gray/50 transition-colors cursor-pointer" onClick={() => { setShowSearch(false) }}>
+                    <div key={msg._id} className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-light-gray/50 transition-colors cursor-pointer" tabIndex={0} role="button" onClick={() => { setShowSearch(false) }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowSearch(false) } }}>
                       {searchTab === "media" && msg.type === "image" && (
                         <img src={msg.fileUrl || msg.content} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
                       )}

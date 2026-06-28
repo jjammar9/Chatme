@@ -4,10 +4,8 @@ import { mockCommunities } from "../../data/mock"
 import { tasks as tasksApi, contacts as contactsApi, users as usersApi, conversations as conversationsApi, upload as uploadApi, calendar as calendarApi } from "../../lib/api"
 import { useToast } from "../../context/ToastContext"
 import Avatar from "../ui/Avatar"
-import { getAvatarUrl, formatTime } from "../../lib/utils"
+import { formatTime } from "../../lib/utils"
 import type { Task, UserSearchResult, Contact } from "../../types"
-
-const activities: { user: string; action: string; time: string; seed: string }[] = []
 
 function answerQuery(msg: string, tasks: Task[], contacts: { name: string; online: boolean; favorite: boolean; role: string; seed: string }[]): string {
   const q = msg.toLowerCase()
@@ -95,15 +93,19 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
   const [scheduleMyEmail, setScheduleMyEmail] = useState("")
   const [scheduleTheirEmail, setScheduleTheirEmail] = useState("")
   const [scheduling, setScheduling] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState("")
 
   useEffect(() => {
-    tasksApi.list().then((data) => setTasks(data.tasks.map((t: Record<string, string>) => ({ ...t, dueDate: new Date(t.dueDate) })))).catch(() => {})
-    contactsApi.list().then((data) => setContacts(data.contacts)).catch(() => {})
-    conversationsApi.list().then((data) => {
-      const convs = data.conversations || []
-      const sum = convs.reduce((acc: number, c: any) => acc + (c.unreadCount || 0), 0)
-      setTotalUnread(sum)
-    }).catch(() => {})
+    let failed = false
+    Promise.all([
+      tasksApi.list().then((data) => setTasks(data.tasks.map((t: Record<string, string>) => ({ ...t, dueDate: new Date(t.dueDate) })))).catch(() => { failed = true; return null }),
+      contactsApi.list().then((data) => setContacts(data.contacts)).catch(() => { failed = true; return null }),
+      conversationsApi.list().then((data) => {
+        const convs = data.conversations || []
+        setTotalUnread(convs.reduce((acc: number, c: any) => acc + (c.unreadCount || 0), 0))
+      }).catch(() => { failed = true; return null }),
+    ]).finally(() => { setLoading(false); if (failed) toast("Some dashboard data failed to load", "error") })
   }, [])
 
   // Re-fetch total unread on custom event
@@ -111,8 +113,7 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
     const handler = () => {
       conversationsApi.list().then((data) => {
         const convs = data.conversations || []
-        const sum = convs.reduce((acc: number, c: any) => acc + (c.unreadCount || 0), 0)
-        setTotalUnread(sum)
+        setTotalUnread(convs.reduce((acc: number, c: any) => acc + (c.unreadCount || 0), 0))
       }).catch(() => {})
     }
     window.addEventListener("unread-cleared", handler)
@@ -156,7 +157,7 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
     { label: "Contacts", value: String(contacts.length), icon: Users, color: "bg-light-green", change: contacts.length > 0 ? `${contacts.length} total` : "No contacts yet" },
     { label: "Tasks", value: String(tasks.length), icon: ClipboardList, color: "bg-dark-purple/10", change: tasks.length > 0 ? `${tasks.filter((t) => t.status === "todo").length} unfinished` : "No tasks yet" },
     { label: "Favourites", value: String(contacts.filter((c) => c.favorite).length), icon: FileText, color: "bg-green/20", change: contacts.filter((c) => c.favorite).length > 0 ? "favourite contacts" : "No favourites yet" },
-    { label: "Groups", value: "0", icon: UserPlus, color: "bg-rose/40", change: "No groups yet" },
+    { label: "Groups", value: String(mockCommunities.length), icon: UserPlus, color: "bg-rose/40", change: mockCommunities.length > 0 ? `${mockCommunities.length} total` : "No groups yet" },
   ]
 
   const continueTasks = tasks.filter((t) => t.status === "todo").slice(0, 4)
@@ -346,11 +347,11 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setShowResults(true) }}
             onFocus={() => setShowResults(true)}
-            onBlur={() => setTimeout(() => setShowResults(false), 200)}
+            onBlur={() => setShowResults(false)}
             placeholder="Search users, tasks, contacts..."
             className="w-full bg-light-gray text-dark-purple text-sm pl-10 pr-4 py-2.5 rounded-xl outline-none focus:ring-2 focus:ring-dark-purple/10 focus:bg-off-white transition-all placeholder:text-dark-purple/25"
           />
-          {showResults && searchQuery.trim() && (
+          {showResults && (searchQuery.trim() || userResults.length > 0) && (
             <div className="absolute top-full left-0 right-0 mt-1.5 bg-off-white rounded-xl shadow-lg border border-gray/20 py-1.5 z-10 max-h-72 overflow-y-auto">
               {userResults.length > 0 && (
                 <>
@@ -395,6 +396,11 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
       </div>
 
       <div className="flex-1 px-8 py-6 space-y-6">
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader size="24" className="animate-spin text-dark-purple/30" />
+          </div>
+        ) : (<>
         <div className="grid grid-cols-5 gap-4">
           {stats.map((s) => (
             <div key={s.label} className="bg-off-white rounded-xl p-4 border border-gray/20">
@@ -412,26 +418,29 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
 
         <div className="grid grid-cols-3 gap-4">
           <div className="col-span-2 bg-off-white rounded-xl p-5 border border-gray/20">
-            <h2 className="text-sm font-bold text-dark-purple mb-4">Recent Activity</h2>
-            <div className="space-y-0">
-              {activities.length > 0 ? activities.map((a, i) => (
-                <div key={i} className="flex items-center gap-3 py-3 border-b border-light-gray last:border-0">
-                  <Avatar seed={a.seed} size="sm" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-dark-purple">
-                      <span className="font-semibold">{a.user}</span>{" "}
-                      <span className="text-dark-purple/70">{a.action}</span>
-                    </p>
+            <h2 className="text-sm font-bold text-dark-purple mb-4">Continue Tasks</h2>
+            {continueTasks.length > 0 ? (
+              <div className="space-y-0">
+                {continueTasks.map((t) => (
+                  <div key={t._id} className="flex items-center gap-3 py-3 border-b border-light-gray last:border-0">
+                    <Avatar seed={t.seed || t.title} size="sm" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-dark-purple truncate">{t.title}</p>
+                      <p className="text-[11px] text-dark-purple/50">
+                        {t.priority && <span className="font-medium capitalize">{t.priority}</span>}
+                        {t.dueDate && <span> · Due {formatTime(t.dueDate)}</span>}
+                      </p>
+                    </div>
+                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full capitalize ${t.priority === "urgent" ? "bg-red/20 text-dark-purple" : "bg-light-gray text-dark-purple/60"}`}>{t.status}</span>
                   </div>
-                  <span className="text-[10px] text-dark-purple/40 shrink-0">{a.time}</span>
-                </div>
-              )) : (
-                <div className="py-8 text-center">
-                  <p className="text-sm text-dark-purple/40">No recent activity</p>
-                  <p className="text-xs text-dark-purple/30 mt-1">Your activity will appear here</p>
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center">
+                <p className="text-sm text-dark-purple/40">All tasks completed</p>
+                <p className="text-xs text-dark-purple/30 mt-1">Great work! 🎉</p>
+              </div>
+            )}
           </div>
 
           <div className="space-y-4">
@@ -458,10 +467,7 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
             </div>
 
             <div className="bg-off-white rounded-xl p-5 border border-gray/20">
-              <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-bold text-dark-purple">Frequent</h2>
-                <span className="text-[10px] text-dark-purple/50">See all</span>
-              </div>
               <div className="flex gap-3">
                 {contacts.slice(0, 4).map((c) => (
                   <div key={c.seed} className="flex flex-col items-center gap-1 cursor-pointer">
@@ -474,33 +480,7 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
           </div>
         </div>
 
-        <div className="col-span-2 bg-off-white rounded-xl p-5 border border-gray/20">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-bold text-dark-purple">Continue Tasks</h2>
-            <span className="text-[10px] text-dark-purple/50">{tasks.filter((t) => t.status === "todo").length} unfinished</span>
-          </div>
-          <div className="space-y-1">
-            {continueTasks.length === 0 ? (
-              <p className="text-sm text-dark-purple/30 text-center py-4">All tasks completed!</p>
-            ) : continueTasks.map((t, i) => (
-              <div key={t._id || i} className="flex items-center gap-3 py-2.5 px-3 rounded-lg hover:bg-light-gray transition-colors cursor-pointer">
-                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${i === 0 ? "border-rose bg-rose/20" : "border-dark-purple/30"}`}>
-                  {i === 0 && <div className="w-2 h-2 rounded-sm bg-rose" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm ${i === 0 ? "text-dark-purple font-medium" : "text-dark-purple/60"}`}>{t.title}</p>
-                </div>
-                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                  t.priority === "urgent" ? "bg-rose/40 text-dark-purple" :
-                  t.priority === "high" ? "bg-light-green text-dark-purple" :
-                  "bg-light-gray text-dark-purple/60"
-                }`}>{t.priority}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
+      </>)}
       {chatOpen && (
         <div className="fixed bottom-6 right-6 w-80 h-96 bg-off-white rounded-2xl shadow-2xl border border-gray/20 flex flex-col z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray/20 bg-dark-purple">
@@ -827,6 +807,8 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
           </div>
         </div>
       )}
+
+      </div>
 
       <button
         onClick={() => setChatOpen(!chatOpen)}

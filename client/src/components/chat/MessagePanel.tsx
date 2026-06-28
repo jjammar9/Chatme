@@ -37,6 +37,7 @@ function getAvatarSeed(conv: Conversation): string {
 
 function ChatItem({ conv, selected, onSelect }: { conv: Conversation; selected: boolean; onSelect: (conv: Conversation) => void }) {
   const unread = conv.unreadCount || 0
+  const otherUserOnline = !conv.isGroup && conv.participantDetails?.[0]?.online
   return (
     <div
       onClick={() => onSelect(conv)}
@@ -44,6 +45,7 @@ function ChatItem({ conv, selected, onSelect }: { conv: Conversation; selected: 
     >
       <div className="relative shrink-0">
         <Avatar seed={getAvatarSeed(conv)} alt={getDisplayName(conv)} size="md" />
+        {!conv.isGroup && <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full ring-2 ring-off-white ${otherUserOnline ? "bg-green" : "bg-gray"}`} />}
         {conv.isGroup && <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-dark-purple rounded-full flex items-center justify-center ring-1 ring-off-white"><Users size="8" className="text-off-white" /></span>}
         {!conv.isGroup && unread > 0 && <span className="absolute -top-1 -right-1 w-2 h-2 bg-red rounded-full ring-2 ring-off-white" />}
       </div>
