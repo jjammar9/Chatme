@@ -79,11 +79,14 @@ function App() {
   const handleLogin = () => {
     setIsLoggedIn(true)
     setActiveNav("dashboard")
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}")
+    if (storedUser.id) localStorage.setItem("userId", storedUser.id)
   }
 
   const handleLogout = () => {
     localStorage.removeItem("token")
     localStorage.removeItem("user")
+    localStorage.removeItem("userId")
     setIsLoggedIn(false)
     setActiveNav("dashboard")
   }
@@ -92,7 +95,12 @@ function App() {
     const token = localStorage.getItem("token")
     if (token) {
       fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
-        .then((res) => { if (res.ok) setIsLoggedIn(true) })
+        .then((res) => { if (res.ok) return res.json(); throw new Error() })
+        .then((data) => {
+          localStorage.setItem("user", JSON.stringify(data.user))
+          localStorage.setItem("userId", data.user.id)
+          setIsLoggedIn(true)
+        })
         .catch(() => {})
     }
   }, [])

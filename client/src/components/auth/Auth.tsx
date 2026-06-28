@@ -33,6 +33,7 @@ export default function Auth({ onLogin }: { onLogin: () => void }) {
       }
       localStorage.setItem("token", data.token)
       localStorage.setItem("user", JSON.stringify(data.user))
+      localStorage.setItem("userId", data.user.id)
       onLogin()
     } catch {
       setError("Network error — is the server running?")
