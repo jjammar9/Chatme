@@ -97,14 +97,22 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
 
   useEffect(() => {
     let failed = false
-    Promise.all([
-      tasksApi.list().then((data) => setTasks(data.tasks.map((t: Record<string, string>) => ({ ...t, dueDate: new Date(t.dueDate) })))).catch(() => { failed = true; return null }),
-      contactsApi.list().then((data) => setContacts(data.contacts)).catch(() => { failed = true; return null }),
-      conversationsApi.list().then((data) => {
-        const convs = data.conversations || []
-        setTotalUnread(convs.reduce((acc: number, c: any) => acc + (c.unreadCount || 0), 0))
-      }).catch(() => { failed = true; return null }),
-    ]).finally(() => { setLoading(false); if (failed) toast("Some dashboard data failed to load", "error") })
+    let mounted = true
+    const fetchData = () => {
+      Promise.all([
+        tasksApi.list().then((data) => { if (mounted) setTasks(data.tasks.map((t: Record<string, string>) => ({ ...t, dueDate: new Date(t.dueDate) }))) }).catch(() => { failed = true; return null }),
+        contactsApi.list().then((data) => { if (mounted) setContacts(data.contacts) }).catch(() => { failed = true; return null }),
+        conversationsApi.list().then((data) => {
+          if (mounted) {
+            const convs = data.conversations || []
+            setTotalUnread(convs.reduce((acc: number, c: any) => acc + (c.unreadCount || 0), 0))
+          }
+        }).catch(() => { failed = true; return null }),
+      ]).finally(() => { if (mounted) { setLoading(false); if (failed) toast("Some dashboard data failed to load", "error") } })
+    }
+    fetchData()
+    const interval = setInterval(fetchData, 10000)
+    return () => { mounted = false; clearInterval(interval) }
   }, [])
 
   // Re-fetch total unread on custom event
@@ -152,7 +160,7 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
     : []
 
   const stats = [
-    { label: "Messages", value: String(totalUnread), icon: MessageSquare, color: "bg-rose", change: totalUnread > 0 ? `unread` : "No unread messages" },
+    { label: "Messages", value: String(totalUnread), icon: MessageSquare, color: "bg-red", change: totalUnread > 0 ? `${totalUnread} unread` : "All clear" },
     { label: "Contacts", value: String(contacts.length), icon: Users, color: "bg-light-green", change: contacts.length > 0 ? `${contacts.length} total` : "No contacts yet" },
     { label: "Tasks", value: String(tasks.length), icon: ClipboardList, color: "bg-dark-purple/10", change: tasks.length > 0 ? `${tasks.filter((t) => t.status === "todo").length} unfinished` : "No tasks yet" },
     { label: "Favourites", value: String(contacts.filter((c) => c.favorite).length), icon: FileText, color: "bg-green/20", change: contacts.filter((c) => c.favorite).length > 0 ? "favourite contacts" : "No favourites yet" },
@@ -402,15 +410,18 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
         ) : (<>
         <div className="grid grid-cols-5 gap-4">
           {stats.map((s) => (
-            <div key={s.label} className="bg-off-white rounded-xl p-4 border border-gray/20">
-              <div className="flex items-center justify-between mb-3">
-                <span className={`w-9 h-9 rounded-lg ${s.color} flex items-center justify-center`}>
-                  <s.icon size={16} className="text-dark-purple" />
+            <div key={s.label} className="bg-off-white rounded-xl p-4 border border-gray/20 relative overflow-hidden">
+              <div className={`absolute top-0 left-0 right-0 h-1 ${s.color}`} />
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-3xl font-bold text-dark-purple leading-none">{s.value}</p>
+                  <p className="text-xs text-dark-purple/50 mt-2">{s.label}</p>
+                </div>
+                <span className={`w-10 h-10 rounded-xl ${s.color} flex items-center justify-center mt-0.5`}>
+                  <s.icon size={18} className="text-off-white" />
                 </span>
-                <span className="text-[11px] font-semibold text-dark-purple/50">{s.change}</span>
               </div>
-              <p className="text-2xl font-bold text-dark-purple">{s.value}</p>
-              <p className="text-xs text-dark-purple/50 mt-0.5">{s.label}</p>
+              <p className={`text-[10px] font-semibold mt-3 ${s.change === "All clear" ? "text-green" : "text-dark-purple/40"}`}>{s.change}</p>
             </div>
           ))}
         </div>
