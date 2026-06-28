@@ -473,7 +473,7 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
             <p className={`text-sm ${isMe ? "text-off-white" : "text-dark-purple"} whitespace-pre-wrap break-words`}>{msg.content}</p>
             <div className="flex items-center justify-end gap-1 mt-1">
               {isMe && editingMsgId !== msg._id && !msg.isDeleted && (
-                <div className="hidden group-hover:flex items-center gap-0.5">
+                <div className="flex items-center gap-0.5">
                   <button onClick={() => handleEditStart(msg)} className="w-5 h-5 rounded-md bg-dark-purple/50 flex items-center justify-center hover:bg-dark-purple/80 transition-colors" aria-label="Edit message">
                     <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                   </button>
