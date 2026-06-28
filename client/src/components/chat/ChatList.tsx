@@ -471,20 +471,20 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
         ) : (
           <div className={`inline-block relative group ${isMe ? "bg-dark-purple rounded-2xl rounded-br-sm" : "bg-white rounded-2xl rounded-bl-sm"} px-4 py-2.5`}>
             <p className={`text-sm ${isMe ? "text-off-white" : "text-dark-purple"} whitespace-pre-wrap break-words`}>{msg.content}</p>
-            <div className="flex items-center justify-end gap-2 mt-1">
+            <div className="flex items-center justify-end gap-1 mt-1">
+              {isMe && editingMsgId !== msg._id && !msg.isDeleted && (
+                <div className="hidden group-hover:flex items-center gap-0.5">
+                  <button onClick={() => handleEditStart(msg)} className="w-5 h-5 rounded-md bg-dark-purple/50 flex items-center justify-center hover:bg-dark-purple/80 transition-colors" aria-label="Edit message">
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                  </button>
+                  <button onClick={() => setDeleteMsgId(msg._id)} className="w-5 h-5 rounded-md bg-dark-purple/50 flex items-center justify-center hover:bg-red/70 transition-colors" aria-label="Delete message">
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                  </button>
+                </div>
+              )}
               {msg.editedAt && <span className={`text-[9px] ${isMe ? "text-off-white/40" : "text-dark-purple/30"}`}>edited</span>}
               <span className={`text-[10px] ${isMe ? "text-off-white/50" : "text-dark-purple/40"}`}>{formatTime(new Date(msg.createdAt))}</span>
             </div>
-            {isMe && editingMsgId !== msg._id && !msg.isDeleted && (
-              <div className="absolute top-0.5 right-0.5 hidden group-hover:flex items-center gap-0.5">
-                <button onClick={() => handleEditStart(msg)} className="w-6 h-6 rounded-md bg-dark-purple/60 flex items-center justify-center hover:bg-dark-purple/80 transition-colors" aria-label="Edit message">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                </button>
-                <button onClick={() => setDeleteMsgId(msg._id)} className="w-6 h-6 rounded-md bg-dark-purple/60 flex items-center justify-center hover:bg-red/70 transition-colors" aria-label="Delete message">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>
