@@ -1,4 +1,5 @@
 import { Router, Response } from "express"
+import { Server } from "socket.io"
 import Conversation from "../models/Conversation"
 import Message from "../models/Message"
 import Notification from "../models/Notification"
@@ -198,6 +199,9 @@ router.post("/:id/messages", async (req: AuthRequest, res: Response) => {
       }
     }
 
+    const io = req.app.get("io") as Server
+    io.to(req.params.id).emit("message:received", message.toObject())
+
     res.status(201).json({ message })
   } catch {
     res.status(500).json({ error: "Server error" })
@@ -221,6 +225,9 @@ router.put("/:id/messages/:msgId", async (req: AuthRequest, res: Response) => {
       conversation.lastMessage = message.content
       await conversation.save()
     }
+
+    const io = req.app.get("io") as Server
+    io.to(req.params.id).emit("message:updated", message.toObject())
 
     res.json({ message })
   } catch {
@@ -254,6 +261,9 @@ router.delete("/:id/messages/:msgId", async (req: AuthRequest, res: Response) =>
       conversation.lastMessageTime = previous?.createdAt
       await conversation.save()
     }
+
+    const io = req.app.get("io") as Server
+    io.to(req.params.id).emit("message:deleted", { messageId: req.params.msgId, mode: "everyone" })
 
     res.json({ message, mode: "everyone" })
   } catch {

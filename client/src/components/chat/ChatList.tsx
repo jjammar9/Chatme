@@ -3,6 +3,7 @@ import { Heart, Search, Video, Phone, Send, Smile, Paperclip, Image, Loader, Fil
 import Avatar from "../ui/Avatar"
 import EmojiPicker from "./EmojiPicker"
 import { conversations, upload as uploadApi } from "../../lib/api"
+import { useSocket } from "../../context/SocketContext"
 import type { Conversation, Message } from "../../types/conversation"
 import { formatTime, formatDate, isSameDay, playMessageSound } from "../../lib/utils"
 
@@ -55,6 +56,8 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null)
   const [editText, setEditText] = useState("")
   const [deleteMsgId, setDeleteMsgId] = useState<string | null>(null)
+  const [otherTyping, setOtherTyping] = useState(false)
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const recordedChunksRef = useRef<Blob[]>([])
   const recordingTimerRef = useRef<ReturnType<typeof setInterval>>()
@@ -68,7 +71,7 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
   const currentUserId = localStorage.getItem("userId") || ""
   const otherParticipantId = selectedConversation?.participants?.find((p) => p !== currentUserId) || ""
   const currentUserData = JSON.parse(localStorage.getItem("user") || "{}")
-  const pollRef = useRef<ReturnType<typeof setInterval>>()
+  const { socket } = useSocket()
 
   const convId = selectedConversation?._id || null
 
@@ -86,37 +89,74 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
     setLocalFav(selectedConversation?.isFavourite || false)
   }, [selectedConversation?._id, selectedConversation?.isFavourite])
 
+  // Join conversation room and listen for socket events
   useEffect(() => {
-    if (!convId) return
+    if (!convId || !socket) return
     setLoading(true)
 
     // Mark messages as read when opening conversation
     conversations.markRead(convId).catch(() => {})
 
+    // Initial fetch via REST
     conversations.messages(convId).then((data) => {
       setMessages(data.messages || [])
       setLoading(false)
     }).catch(() => setLoading(false))
 
-    if (pollRef.current) clearInterval(pollRef.current)
-    pollRef.current = setInterval(async () => {
-      try {
-        const data = await conversations.messages(convId)
-        const newMsgs = (data.messages || [])
-        setMessages((prev) => {
-          const realPrev = prev.filter((m) => !m._id.startsWith("temp-"))
-          const added = newMsgs.filter((m) => !realPrev.some((r) => r._id === m._id))
-          if (added.length > 0) {
-            const hasIncoming = added.some((m: Message) => m.senderId !== currentUserId)
-            if (hasIncoming) playMessageSound()
-          }
-          return newMsgs
-        })
-      } catch {}
-    }, 3000)
+    // Join socket room
+    socket.emit("join:conversation", convId)
 
-    return () => { if (pollRef.current) clearInterval(pollRef.current) }
-  }, [convId])
+    const handleMessageReceived = (msg: Message) => {
+      setMessages((prev) => {
+        const existingIdx = prev.findIndex((m) => m._id === msg._id)
+        if (existingIdx > -1) {
+          const updated = [...prev]
+          updated[existingIdx] = msg
+          return updated
+        }
+        const tempIdx = prev.findIndex((m) => m._id.startsWith("temp-") && m.senderId === msg.senderId)
+        if (tempIdx > -1) {
+          const updated = [...prev]
+          updated[tempIdx] = msg
+          return updated
+        }
+        if (msg.senderId !== currentUserId) playMessageSound()
+        return [...prev, msg]
+      })
+    }
+
+    const handleMessageUpdated = (msg: Message) => {
+      setMessages((prev) => prev.map((m) => m._id === msg._id ? msg : m))
+    }
+
+    const handleMessageDeleted = (data: { messageId: string; mode: string }) => {
+      setMessages((prev) => prev.map((m) => m._id === data.messageId ? { ...m, isDeleted: true, content: "" } : m))
+    }
+
+    socket.on("message:received", handleMessageReceived)
+    socket.on("message:updated", handleMessageUpdated)
+    socket.on("message:deleted", handleMessageDeleted)
+
+    const handleTypingStarted = (data: { userId: string }) => {
+      if (data.userId !== currentUserId) setOtherTyping(true)
+    }
+    const handleTypingStopped = (data: { userId: string }) => {
+      if (data.userId !== currentUserId) setOtherTyping(false)
+    }
+
+    socket.on("typing:started", handleTypingStarted)
+    socket.on("typing:stopped", handleTypingStopped)
+
+    return () => {
+      socket.emit("leave:conversation", convId)
+      socket.off("message:received", handleMessageReceived)
+      socket.off("message:updated", handleMessageUpdated)
+      socket.off("message:deleted", handleMessageDeleted)
+      socket.off("typing:started", handleTypingStarted)
+      socket.off("typing:stopped", handleTypingStopped)
+      setOtherTyping(false)
+    }
+  }, [convId, socket])
 
   useEffect(() => {
     if (!messagesEndRef.current) return
@@ -159,6 +199,10 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
     setText("")
     setShowEmoji(false)
     setSending(true)
+    if (socket && convId) {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+      socket.emit("typing:stop", { conversationId: convId })
+    }
     try {
       const data = await conversations.sendMessage(convId, {
         content: text.trim(),
@@ -541,6 +585,7 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
           <Avatar seed={getAvatarSeed(selectedConversation)} alt={getDisplayName(selectedConversation)} size="md" />
           <div>
             <p className="text-sm font-bold text-dark-purple">{getDisplayName(selectedConversation)}</p>
+            {otherTyping && <p className="text-[10px] text-dark-purple/40 italic">typing...</p>}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -667,7 +712,16 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
                 ref={inputRef}
                 type="text"
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={(e) => {
+                  setText(e.target.value)
+                  if (socket && convId) {
+                    socket.emit("typing:start", { conversationId: convId })
+                    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+                    typingTimeoutRef.current = setTimeout(() => {
+                      socket.emit("typing:stop", { conversationId: convId })
+                    }, 2000)
+                  }
+                }}
                 onKeyDown={handleKeyDown}
                 placeholder="Type a message..."
                 className="flex-1 bg-transparent text-sm text-dark-purple placeholder-dark-purple/40 outline-none"

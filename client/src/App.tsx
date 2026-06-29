@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { LogOut, X } from "lucide-react"
 import { ThemeProvider } from "./context/ThemeContext"
 import { ToastProvider } from "./context/ToastContext"
+import { SocketProvider } from "./context/SocketContext"
 import AppLayout from "./components/layout/AppLayout"
 import Sidebar from "./components/layout/Sidebar"
 import ChatList from "./components/chat/ChatList"
@@ -114,6 +115,7 @@ function App() {
   return (
     <ThemeProvider>
       <ToastProvider>
+      <SocketProvider>
       {!isLoggedIn ? (
         <Auth onLogin={handleLogin} />
       ) : viewProfileUserId ? (
@@ -138,6 +140,7 @@ function App() {
           <LogoutModal open={showLogout} onClose={() => setShowLogout(false)} onLogout={handleLogout} />
         </div>
       )}
+      </SocketProvider>
     </ToastProvider>
     </ThemeProvider>
   )

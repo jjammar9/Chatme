@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { ExternalLink, MessageCircle, Search, X, Loader, UserPlus, Users } from "lucide-react"
 import Avatar from "../ui/Avatar"
 import { conversations, users, contacts as contactsApi } from "../../lib/api"
+import { useSocket } from "../../context/SocketContext"
 import { getAvatarUrl } from "../../lib/utils"
 
 import type { Conversation } from "../../types/conversation"
@@ -259,6 +260,7 @@ export default function MessagePanel({ selectedConversationId, onSelectConversat
   const [showCreateGroup, setShowCreateGroup] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const currentUserId = localStorage.getItem("userId") || ""
+  const { socket } = useSocket()
 
   const fetchConversations = useCallback(async () => {
     try {
@@ -277,6 +279,23 @@ export default function MessagePanel({ selectedConversationId, onSelectConversat
     window.addEventListener("conversation-fav-update", handler)
     return () => window.removeEventListener("conversation-fav-update", handler)
   }, [fetchConversations])
+
+  useEffect(() => {
+    if (!socket) return
+    const refresh = () => fetchConversations()
+    socket.on("message:received", refresh)
+    socket.on("message:updated", refresh)
+    socket.on("message:deleted", refresh)
+    socket.on("user:online", refresh)
+    socket.on("user:offline", refresh)
+    return () => {
+      socket.off("message:received", refresh)
+      socket.off("message:updated", refresh)
+      socket.off("message:deleted", refresh)
+      socket.off("user:online", refresh)
+      socket.off("user:offline", refresh)
+    }
+  }, [socket, fetchConversations])
 
   const handleSelect = (conv: Conversation) => {
     const cleared = conv.unreadCount || 0
