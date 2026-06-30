@@ -56,6 +56,8 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null)
   const [editText, setEditText] = useState("")
   const [deleteMsgId, setDeleteMsgId] = useState<string | null>(null)
+  const [replyToMsg, setReplyToMsg] = useState<Message | null>(null)
+  const [reactingMsgId, setReactingMsgId] = useState<string | null>(null)
   const [otherTyping, setOtherTyping] = useState(false)
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -144,8 +146,15 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
       if (data.userId !== currentUserId) setOtherTyping(false)
     }
 
+    const handleMessageRead = (data: { conversationId: string; userId: string }) => {
+      setMessages((prev) => prev.map((m) =>
+        m.readBy.includes(data.userId) ? m : { ...m, readBy: [...m.readBy, data.userId] }
+      ))
+    }
+
     socket.on("typing:started", handleTypingStarted)
     socket.on("typing:stopped", handleTypingStopped)
+    socket.on("message:read", handleMessageRead)
 
     return () => {
       socket.emit("leave:conversation", convId)
@@ -154,6 +163,7 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
       socket.off("message:deleted", handleMessageDeleted)
       socket.off("typing:started", handleTypingStarted)
       socket.off("typing:stopped", handleTypingStopped)
+      socket.off("message:read", handleMessageRead)
       setOtherTyping(false)
     }
   }, [convId, socket])
@@ -195,8 +205,10 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
       readBy: [currentUserId],
       createdAt: new Date().toISOString(),
     }
-    setMessages((prev) => [...prev, optimisticMsg])
+    const replyPayload = replyToMsg ? { messageId: replyToMsg._id, content: replyToMsg.content, senderName: replyToMsg.senderName } : null
+    setMessages((prev) => [...prev, { ...optimisticMsg, replyTo: replyPayload || undefined }])
     setText("")
+    setReplyToMsg(null)
     setShowEmoji(false)
     setSending(true)
     if (socket && convId) {
@@ -209,6 +221,7 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
         senderName: currentUserData.name || "You",
         senderSeed: currentUserData.avatarSeed || currentUserData.username || currentUserData.name || "user",
         type: "text",
+        ...(replyPayload ? { replyTo: replyPayload } : {}),
       })
       if (data.message) {
         setMessages((prev) => {
@@ -413,6 +426,17 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
     })
   }
 
+  const handleReaction = async (msgId: string, emoji: string) => {
+    if (!convId) return
+    setReactingMsgId(null)
+    try {
+      const data = await conversations.addReaction(convId, msgId, emoji)
+      if (data.message) setMessages((prev) => prev.map((m) => m._id === msgId ? data.message : m))
+    } catch { /* ignore */ }
+  }
+
+  const REACT_EMOJIS = ["❤️", "😂", "😮", "😢", "👍", "🔥"]
+
   const renderMessage = (msg: Message, options?: { showTimestamp?: boolean }) => {
     const isMe = msg.senderId === currentUserId
     const showTime = options?.showTimestamp !== false
@@ -521,6 +545,13 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
       )
     }
 
+    const reactions = msg.reactions || []
+    const groupedReactions = reactions.reduce<Record<string, string[]>>((acc, r) => {
+      if (!acc[r.emoji]) acc[r.emoji] = []
+      acc[r.emoji].push(r.userId)
+      return acc
+    }, {})
+
     return (
       <div className={`max-w-[80%] ${isMe ? "text-right" : ""}`}>
         {!isMe && <span className="text-xs font-bold text-dark-purple/60 block mb-1 text-left">{msg.senderName}</span>}
@@ -539,23 +570,73 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
             </div>
           </div>
         ) : (
-          <div className={`inline-block relative group ${isMe ? "bg-dark-purple rounded-2xl rounded-br-sm" : "bg-white rounded-2xl rounded-bl-sm"} px-4 py-2.5`}>
-            <p className={`text-sm ${isMe ? "text-off-white" : "text-dark-purple"} whitespace-pre-wrap break-words`}>{msg.content}</p>
-            {showTime && (
-              <div className="flex items-center justify-end gap-1 mt-1">
-                {isMe && editingMsgId !== msg._id && !msg.isDeleted && (
-                  <div className="flex items-center gap-0.5">
-                    <button onClick={() => handleEditStart(msg)} className="w-5 h-5 rounded-md bg-dark-purple/50 flex items-center justify-center hover:bg-dark-purple/80 transition-colors" aria-label="Edit message">
-                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+          <div className="inline-block relative">
+            <div className={`group ${isMe ? "bg-dark-purple rounded-2xl rounded-br-sm" : "bg-white rounded-2xl rounded-bl-sm"} px-4 py-2.5`}>
+              {msg.replyTo && (
+                <div className={`text-xs rounded-lg px-2.5 py-1.5 mb-1.5 border-l-2 ${isMe ? "bg-dark-purple/40 border-off-white/30 text-off-white/70" : "bg-gray/30 border-dark-purple/30 text-dark-purple/60"}`}>
+                  <span className="font-semibold">{msg.replyTo.senderName}</span>
+                  <p className="truncate">{msg.replyTo.content}</p>
+                </div>
+              )}
+              <p className={`text-sm ${isMe ? "text-off-white" : "text-dark-purple"} whitespace-pre-wrap break-words`}>{msg.content}</p>
+              {showTime && (
+                <div className="flex items-center justify-end gap-1 mt-1">
+                  {!msg.isDeleted && (
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {!isMe && (
+                        <button onClick={() => setReactingMsgId(msg._id)} className="w-5 h-5 rounded-md bg-black/10 flex items-center justify-center hover:bg-black/20 transition-colors" aria-label="React">
+                          <Smile size="10" className={isMe ? "text-off-white/60" : "text-dark-purple/50"} />
+                        </button>
+                      )}
+                      <button onClick={() => { setReplyToMsg(msg); inputRef.current?.focus() }} className="w-5 h-5 rounded-md bg-black/10 flex items-center justify-center hover:bg-black/20 transition-colors" aria-label="Reply">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={isMe ? "rgba(255,255,255,0.5)" : "rgba(27,0,54,0.4)"} strokeWidth="2.5" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      </button>
+                      {isMe && editingMsgId !== msg._id && (
+                        <>
+                          <button onClick={() => handleEditStart(msg)} className="w-5 h-5 rounded-md bg-dark-purple/50 flex items-center justify-center hover:bg-dark-purple/80 transition-colors" aria-label="Edit message">
+                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                          </button>
+                          <button onClick={() => setDeleteMsgId(msg._id)} className="w-5 h-5 rounded-md bg-dark-purple/50 flex items-center justify-center hover:bg-red/70 transition-colors" aria-label="Delete message">
+                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {msg.editedAt && <span className={`text-[9px] ${isMe ? "text-off-white/40" : "text-dark-purple/30"}`}>edited</span>}
+                  {isMe && (isRead ? <CheckCheck size="11" className={isMe ? "text-off-white/50" : "text-dark-purple/40"} /> : <Check size="11" className={isMe ? "text-off-white/50" : "text-dark-purple/40"} />)}
+                  <span className={`text-[10px] ${isMe ? "text-off-white/50" : "text-dark-purple/40"}`}>{formatTime(new Date(msg.createdAt))}</span>
+                </div>
+              )}
+            </div>
+            {Object.keys(groupedReactions).length > 0 && (
+              <div className={`flex items-center gap-1 mt-1 ${isMe ? "justify-end" : "justify-start"} px-1`}>
+                {Object.entries(groupedReactions).map(([emoji, users]) => {
+                  const hasMine = users.includes(currentUserId)
+                  return (
+                    <button key={emoji} onClick={() => handleReaction(msg._id, emoji)}
+                      className={`text-xs px-1.5 py-0.5 rounded-full border flex items-center gap-0.5 ${hasMine ? "bg-dark-purple/10 border-dark-purple/20" : "bg-light-gray border-gray/20 hover:bg-gray/30"}`}>
+                      <span>{emoji}</span>
+                      {users.length > 1 && <span className="text-[10px] text-dark-purple/50 font-medium">{users.length}</span>}
                     </button>
-                    <button onClick={() => setDeleteMsgId(msg._id)} className="w-5 h-5 rounded-md bg-dark-purple/50 flex items-center justify-center hover:bg-red/70 transition-colors" aria-label="Delete message">
-                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                    </button>
-                  </div>
-                )}
-                {msg.editedAt && <span className={`text-[9px] ${isMe ? "text-off-white/40" : "text-dark-purple/30"}`}>edited</span>}
-                {isMe && (isRead ? <CheckCheck size="11" className={isMe ? "text-off-white/50" : "text-dark-purple/40"} /> : <Check size="11" className={isMe ? "text-off-white/50" : "text-dark-purple/40"} />)}
-                <span className={`text-[10px] ${isMe ? "text-off-white/50" : "text-dark-purple/40"}`}>{formatTime(new Date(msg.createdAt))}</span>
+                  )
+                })}
+              </div>
+            )}
+            <div className="flex items-center gap-1 mt-0.5 px-1">
+              <button onClick={() => setReactingMsgId(msg._id)} className={`text-[10px] text-dark-purple/30 hover:text-dark-purple/60 transition-colors font-medium`}>
+                {isMe ? "React" : "React"}
+              </button>
+              <button onClick={() => { setReplyToMsg(msg); inputRef.current?.focus() }} className="text-[10px] text-dark-purple/30 hover:text-dark-purple/60 transition-colors font-medium">Reply</button>
+            </div>
+            {reactingMsgId === msg._id && (
+              <div className="absolute bottom-full left-0 mb-2 bg-off-white rounded-xl shadow-xl border border-gray/20 p-1.5 flex items-center gap-1 z-10" onClick={(e) => e.stopPropagation()}>
+                {REACT_EMOJIS.map((emoji) => (
+                  <button key={emoji} onClick={() => handleReaction(msg._id, emoji)}
+                    className="w-8 h-8 rounded-lg hover:bg-light-gray flex items-center justify-center text-lg transition-colors">
+                    {emoji}
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -667,6 +748,18 @@ export default function ChatList({ selectedConversation }: ChatListProps) {
           </button>
         )}
       </div>
+      {replyToMsg && (
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-gray/10 border-t border-light-gray text-xs text-dark-purple/60">
+          <div className="flex-1 flex items-center gap-2 min-w-0">
+            <div className="w-0.5 h-6 rounded bg-dark-purple/30 shrink-0" />
+            <div className="min-w-0">
+              <span className="font-semibold text-dark-purple/80">Replying to {replyToMsg.senderName}</span>
+              <p className="truncate">{replyToMsg.content}</p>
+            </div>
+          </div>
+          <button onClick={() => setReplyToMsg(null)} aria-label="Cancel reply"><X size="14" /></button>
+        </div>
+      )}
       <div className="flex items-center gap-2 px-4 py-3 bg-off-white border-t border-light-gray">
         <div className="flex items-center gap-1 h-10">
           <div className="relative emoji-picker-area">

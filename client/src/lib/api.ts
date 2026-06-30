@@ -174,4 +174,8 @@ export const conversations = {
     fetch(`${BASE}/conversations/${convId}/messages/${msgId}`, { method: "PUT", headers: headers(), body: JSON.stringify({ content }) }).then(handleResponse),
   deleteMessage: (convId: string, msgId: string, mode: "me" | "everyone") =>
     fetch(`${BASE}/conversations/${convId}/messages/${msgId}?mode=${mode}`, { method: "DELETE", headers: headers() }).then(handleResponse),
+  addReaction: (convId: string, msgId: string, emoji: string) =>
+    fetch(`${BASE}/conversations/${convId}/messages/${msgId}/reaction`, { method: "POST", headers: headers(), body: JSON.stringify({ emoji }) }).then(handleResponse),
+  removeReaction: (convId: string, msgId: string) =>
+    fetch(`${BASE}/conversations/${convId}/messages/${msgId}/reaction`, { method: "DELETE", headers: headers() }).then(handleResponse),
 }

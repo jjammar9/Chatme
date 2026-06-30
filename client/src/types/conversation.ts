@@ -19,6 +19,17 @@ export interface Conversation {
   isFavourite?: boolean
 }
 
+export interface Reaction {
+  userId: string
+  emoji: string
+}
+
+export interface ReplyTo {
+  messageId: string
+  content: string
+  senderName: string
+}
+
 export interface Message {
   _id: string
   conversationId: string
@@ -35,4 +46,6 @@ export interface Message {
   editedAt?: string
   isDeleted?: boolean
   createdAt: string
+  reactions?: Reaction[]
+  replyTo?: ReplyTo
 }

@@ -1,5 +1,16 @@
 import mongoose, { Document, Schema } from "mongoose"
 
+export interface IReaction {
+  userId: string
+  emoji: string
+}
+
+export interface IReplyTo {
+  messageId: string
+  content: string
+  senderName: string
+}
+
 export interface IMessage extends Document {
   conversationId: string
   senderId: string
@@ -15,7 +26,14 @@ export interface IMessage extends Document {
   editedAt?: Date
   isDeleted: boolean
   createdAt: Date
+  reactions: IReaction[]
+  replyTo?: IReplyTo
 }
+
+const reactionSchema = new Schema<IReaction>({
+  userId: { type: String, required: true },
+  emoji: { type: String, required: true },
+}, { _id: false })
 
 const messageSchema = new Schema<IMessage>({
   conversationId: { type: String, required: true, index: true },
@@ -32,6 +50,8 @@ const messageSchema = new Schema<IMessage>({
   editedAt: { type: Date },
   isDeleted: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
+  reactions: { type: [reactionSchema], default: [] },
+  replyTo: { type: Schema.Types.Mixed, default: null },
 })
 
 export default mongoose.model<IMessage>("Message", messageSchema)

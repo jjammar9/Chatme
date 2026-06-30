@@ -137,6 +137,8 @@ router.put("/:id/read", async (req: AuthRequest, res: Response) => {
       { relatedId: req.params.id, userId: req.userId, type: "message", read: false },
       { $set: { read: true } }
     )
+    const io = req.app.get("io") as Server
+    io.to(req.params.id).emit("message:read", { conversationId: req.params.id, userId: req.userId })
     res.json({ ok: true })
   } catch {
     res.status(500).json({ error: "Server error" })
@@ -167,7 +169,7 @@ router.post("/:id/messages", async (req: AuthRequest, res: Response) => {
     if (!conversation.participants.includes(req.userId!)) {
       res.status(403).json({ error: "Not a participant" }); return
     }
-    const { senderName, senderSeed, content, type, fileUrl, fileName, fileSize, fileMimeType } = req.body
+    const { senderName, senderSeed, content, type, fileUrl, fileName, fileSize, fileMimeType, replyTo } = req.body
     const message = await Message.create({
       conversationId: req.params.id,
       senderId: req.userId,
@@ -180,6 +182,7 @@ router.post("/:id/messages", async (req: AuthRequest, res: Response) => {
       fileSize,
       fileMimeType,
       readBy: [req.userId],
+      replyTo: replyTo || null,
     })
     conversation.lastMessage = content
     conversation.lastMessageTime = message.createdAt
@@ -269,6 +272,43 @@ router.delete("/:id/messages/:msgId", async (req: AuthRequest, res: Response) =>
   } catch {
     res.status(500).json({ error: "Server error" })
   }
+})
+
+// Add or update reaction on a message
+router.post("/:id/messages/:msgId/reaction", async (req: AuthRequest, res: Response) => {
+  try {
+    const message = await Message.findById(req.params.msgId)
+    if (!message) { res.status(404).json({ error: "Message not found" }); return }
+    const { emoji } = req.body
+    if (!emoji) { res.status(400).json({ error: "Emoji required" }); return }
+    const existingIdx = (message.reactions || []).findIndex((r) => r.userId === req.userId)
+    if (existingIdx > -1) {
+      if (message.reactions[existingIdx].emoji === emoji) {
+        message.reactions.splice(existingIdx, 1)
+      } else {
+        message.reactions[existingIdx].emoji = emoji
+      }
+    } else {
+      message.reactions.push({ userId: req.userId!, emoji })
+    }
+    await message.save()
+    const io = req.app.get("io") as Server
+    io.to(req.params.id).emit("message:updated", message.toObject())
+    res.json({ message })
+  } catch { res.status(500).json({ error: "Server error" }) }
+})
+
+// Remove own reaction
+router.delete("/:id/messages/:msgId/reaction", async (req: AuthRequest, res: Response) => {
+  try {
+    const message = await Message.findById(req.params.msgId)
+    if (!message) { res.status(404).json({ error: "Message not found" }); return }
+    message.reactions = (message.reactions || []).filter((r) => r.userId !== req.userId)
+    await message.save()
+    const io = req.app.get("io") as Server
+    io.to(req.params.id).emit("message:updated", message.toObject())
+    res.json({ message })
+  } catch { res.status(500).json({ error: "Server error" }) }
 })
 
 export default router
