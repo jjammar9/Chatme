@@ -179,3 +179,8 @@ export const conversations = {
   removeReaction: (convId: string, msgId: string) =>
     fetch(`${BASE}/conversations/${convId}/messages/${msgId}/reaction`, { method: "DELETE", headers: headers() }).then(handleResponse),
 }
+
+export const activity = {
+  list: () =>
+    fetch(`${BASE}/activity`, { headers: headers() }).then(handleResponse),
+}

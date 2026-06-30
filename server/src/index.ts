@@ -16,6 +16,7 @@ import userRoutes from "./routes/users"
 import friendRequestRoutes from "./routes/friendRequests"
 import notificationRoutes from "./routes/notifications"
 import uploadRoutes from "./routes/upload"
+import activityRoutes from "./routes/activity"
 import { setupSocket } from "./socket"
 
 dotenv.config()
@@ -41,6 +42,7 @@ app.use("/api/users", userRoutes)
 app.use("/api/friend-requests", friendRequestRoutes)
 app.use("/api/notifications", notificationRoutes)
 app.use("/api/upload", uploadRoutes)
+app.use("/api/activity", activityRoutes)
 app.use("/uploads", express.static("uploads"))
 
 setupSocket(io)
