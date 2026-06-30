@@ -14,6 +14,7 @@ export interface Community {
   isMember: boolean
   isAdmin: boolean
   pendingRequest: "pending" | null
+  conversationId?: string
 }
 
 export interface JoinRequest {

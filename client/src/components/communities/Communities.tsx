@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from "react"
-import { Search, Users, Plus, X, Loader, Check, UserPlus, LogOut, Send, UserCheck } from "lucide-react"
+import { Search, Users, Plus, X, Loader, UserPlus, LogOut, Send } from "lucide-react"
 import Avatar from "../ui/Avatar"
 import Badge from "../ui/Badge"
 import Button from "../ui/Button"
+import CommunityDetail from "./CommunityDetail"
 import { communities as communitiesApi, contacts as contactsApi } from "../../lib/api"
 import { useToast } from "../../context/ToastContext"
 import type { Community } from "../../types"
@@ -13,6 +14,7 @@ export default function Communities() {
   const [contacts, setContacts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedCommunity, setSelectedCommunity] = useState<Community | null>(null)
   const [activeTag, setActiveTag] = useState("All")
   const [showCreate, setShowCreate] = useState(false)
   const [createName, setCreateName] = useState("")
@@ -116,6 +118,10 @@ export default function Communities() {
 
   const totalOnline = list.reduce((s, c) => s + c.onlineCount, 0)
 
+  if (selectedCommunity) {
+    return <CommunityDetail community={selectedCommunity} onBack={() => setSelectedCommunity(null)} />
+  }
+
   return (
     <div className="h-full bg-light-gray flex flex-col overflow-y-auto">
       <div className="bg-off-white border-b border-gray/30 px-8 py-6">
@@ -170,7 +176,7 @@ export default function Communities() {
             {filtered.map((c) => {
               const pendingCount = 0 // We'll track this from joinRequests in a future update
               return (
-              <div key={c._id} className="bg-off-white rounded-xl border border-gray/20 p-5 hover:shadow-lg transition-shadow">
+              <div key={c._id} onClick={() => setSelectedCommunity(c)} className="bg-off-white rounded-xl border border-gray/20 p-5 hover:shadow-lg transition-shadow cursor-pointer">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex -space-x-2">
                     {c.memberDetails.slice(0, 3).map((m, i) => (
@@ -208,14 +214,14 @@ export default function Communities() {
                     <div className="flex gap-2">
                       {c.isAdmin && (
                         <button
-                          onClick={() => setShowInvite({ communityId: c._id, communityName: c.name })}
+                          onClick={(e) => { e.stopPropagation(); setShowInvite({ communityId: c._id, communityName: c.name }) }}
                           className="flex-1 py-2 rounded-lg bg-dark-purple/10 text-sm font-semibold text-dark-purple hover:bg-dark-purple/20 transition-colors flex items-center justify-center gap-1.5"
                         >
                           <UserPlus size="14" /> Invite
                         </button>
                       )}
                       <button
-                        onClick={() => handleLeave(c._id)}
+                        onClick={(e) => { e.stopPropagation(); handleLeave(c._id) }}
                         disabled={actionLoading[c._id]}
                         className={`${c.isAdmin ? "flex-none px-3" : "w-full"} py-2 rounded-lg border border-gray/30 text-sm font-semibold text-dark-purple/60 hover:bg-light-gray transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40`}
                       >
@@ -225,7 +231,7 @@ export default function Communities() {
                     </div>
                   ) : c.pendingRequest === "pending" ? (
                     <button
-                      onClick={() => cancelRequest(c._id)}
+                      onClick={(e) => { e.stopPropagation(); cancelRequest(c._id) }}
                       disabled={actionLoading[c._id]}
                       className="w-full py-2 rounded-lg border border-gray/30 text-sm font-semibold text-dark-purple/60 hover:bg-light-gray transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40"
                     >
@@ -234,7 +240,7 @@ export default function Communities() {
                     </button>
                   ) : (
                     <button
-                      onClick={() => requestJoin(c._id)}
+                      onClick={(e) => { e.stopPropagation(); requestJoin(c._id) }}
                       disabled={actionLoading[c._id]}
                       className="w-full py-2 rounded-lg bg-dark-purple text-sm font-semibold text-off-white hover:bg-deep-purple transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40"
                     >

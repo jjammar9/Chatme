@@ -2,6 +2,7 @@ import { Router, Response } from "express"
 import Community from "../models/Community"
 import User from "../models/User"
 import Notification from "../models/Notification"
+import Conversation from "../models/Conversation"
 import { authMiddleware, AuthRequest } from "../middleware/auth"
 
 const router = Router()
@@ -42,6 +43,11 @@ router.post("/", async (req: AuthRequest, res: Response) => {
   try {
     const { name, description, tags, avatarSeed } = req.body
     if (!name || !name.trim()) { res.status(400).json({ error: "Name is required" }); return }
+    const conversation = await Conversation.create({
+      participants: [req.userId!],
+      isGroup: true,
+      groupName: name.trim(),
+    })
     const community = await Community.create({
       name: name.trim(),
       description: description?.trim() || "",
@@ -50,8 +56,10 @@ router.post("/", async (req: AuthRequest, res: Response) => {
       members: [req.userId!],
       admins: [req.userId!],
       createdBy: req.userId!,
+      conversationId: conversation._id.toString(),
     })
     const enriched = await enrichCommunity(community.toObject(), req.userId!)
+    enriched.conversationId = conversation._id.toString()
     res.status(201).json({ community: enriched })
   } catch (e) {
     console.error(e)
@@ -74,7 +82,7 @@ router.put("/:id", async (req: AuthRequest, res: Response) => {
   try {
     const community = await Community.findById(req.params.id)
     if (!community) { res.status(404).json({ error: "Community not found" }); return }
-    if (!community.admins.includes(req.userId!)) { res.status(403).json({ error: "Not authorized" }); return }
+    if (!(community.admins || []).includes(req.userId!)) { res.status(403).json({ error: "Not authorized" }); return }
     const { name, description, tags, avatarSeed } = req.body
     if (name) community.name = name.trim()
     if (description !== undefined) community.description = description.trim()
@@ -90,7 +98,7 @@ router.delete("/:id", async (req: AuthRequest, res: Response) => {
   try {
     const community = await Community.findById(req.params.id)
     if (!community) { res.status(404).json({ error: "Community not found" }); return }
-    if (!community.admins.includes(req.userId!)) { res.status(403).json({ error: "Not authorized" }); return }
+    if (!(community.admins || []).includes(req.userId!)) { res.status(403).json({ error: "Not authorized" }); return }
     await Community.findByIdAndDelete(req.params.id)
     res.json({ ok: true })
   } catch { res.status(500).json({ error: "Server error" }) }
@@ -108,7 +116,7 @@ router.post("/:id/request-join", async (req: AuthRequest, res: Response) => {
     await community.save()
     const requester = await User.findById(req.userId).select("name").lean()
     // Notify all admins
-    for (const adminId of community.admins) {
+    for (const adminId of (community.admins || [])) {
       if (adminId !== req.userId) {
         await Notification.create({
           userId: adminId,
@@ -141,12 +149,15 @@ router.post("/:id/accept-request/:userId", async (req: AuthRequest, res: Respons
   try {
     const community = await Community.findById(req.params.id)
     if (!community) { res.status(404).json({ error: "Community not found" }); return }
-    if (!community.admins.includes(req.userId!)) { res.status(403).json({ error: "Not authorized" }); return }
+    if (!(community.admins || []).includes(req.userId!)) { res.status(403).json({ error: "Not authorized" }); return }
     const request = (community.joinRequests || []).find((r) => r.userId === req.params.userId && r.status === "pending")
     if (!request) { res.status(400).json({ error: "No pending request" }); return }
     request.status = "accepted"
     if (!community.members.includes(req.params.userId)) community.members.push(req.params.userId)
     await community.save()
+    if (community.conversationId) {
+      await Conversation.findByIdAndUpdate(community.conversationId, { $addToSet: { participants: req.params.userId } })
+    }
     await Notification.create({
       userId: req.params.userId,
       type: "request_accepted",
@@ -163,7 +174,7 @@ router.post("/:id/decline-request/:userId", async (req: AuthRequest, res: Respon
   try {
     const community = await Community.findById(req.params.id)
     if (!community) { res.status(404).json({ error: "Community not found" }); return }
-    if (!community.admins.includes(req.userId!)) { res.status(403).json({ error: "Not authorized" }); return }
+    if (!(community.admins || []).includes(req.userId!)) { res.status(403).json({ error: "Not authorized" }); return }
     const request = (community.joinRequests || []).find((r) => r.userId === req.params.userId && r.status === "pending")
     if (!request) { res.status(400).json({ error: "No pending request" }); return }
     request.status = "declined"
@@ -185,7 +196,7 @@ router.post("/:id/invite", async (req: AuthRequest, res: Response) => {
   try {
     const community = await Community.findById(req.params.id)
     if (!community) { res.status(404).json({ error: "Community not found" }); return }
-    if (!community.admins.includes(req.userId!)) { res.status(403).json({ error: "Not authorized" }); return }
+    if (!(community.admins || []).includes(req.userId!)) { res.status(403).json({ error: "Not authorized" }); return }
     const { userId: targetUserId } = req.body
     if (!targetUserId) { res.status(400).json({ error: "userId required" }); return }
     if (community.members.includes(targetUserId)) { res.status(400).json({ error: "Already a member" }); return }
@@ -209,9 +220,12 @@ router.post("/:id/accept-invite", async (req: AuthRequest, res: Response) => {
     if (community.members.includes(req.userId!)) { res.status(400).json({ error: "Already a member" }); return }
     community.members.push(req.userId!)
     await community.save()
+    if (community.conversationId) {
+      await Conversation.findByIdAndUpdate(community.conversationId, { $addToSet: { participants: req.userId! } })
+    }
     const user = await User.findById(req.userId).select("name").lean()
     // Notify admins
-    for (const adminId of community.admins) {
+    for (const adminId of (community.admins || [])) {
       if (adminId !== req.userId) {
         await Notification.create({
           userId: adminId,
@@ -240,6 +254,9 @@ router.post("/:id/leave", async (req: AuthRequest, res: Response) => {
     if (!community.members.includes(req.userId!)) { res.status(400).json({ error: "Not a member" }); return }
     community.members = community.members.filter((m) => m !== req.userId)
     await community.save()
+    if (community.conversationId) {
+      await Conversation.findByIdAndUpdate(community.conversationId, { $pull: { participants: req.userId! } })
+    }
     res.json({ ok: true })
   } catch { res.status(500).json({ error: "Server error" }) }
 })
