@@ -13,16 +13,18 @@ async function enrichCommunity(community: any, userId: string) {
   const allIds = [...new Set<string>([...(community.members || []), ...(community.admins || [])])]
   const users = await User.find({ _id: { $in: allIds } }).select("name avatarSeed online").lean()
   const userMap: Record<string, any> = {}
-  for (const u of users) userMap[u._id.toString()] = { name: u.name || "Unknown", avatarSeed: u.avatarSeed || u.name || u.username || "", online: u.online || false }
+  for (const u of users) userMap[u._id.toString()] = { name: u.name || "Unknown", avatarSeed: u.avatarSeed || u.name || u.username || "", online: u.online || false, linkedUserId: u._id.toString() }
   const pendingReq = (community.joinRequests || []).find((r: any) => r.userId === userId && r.status === "pending")
+  const isAdmin = (community.admins || []).includes(userId)
   return {
     ...community,
     memberCount: (community.members || []).length,
     onlineCount: (community.members || []).filter((m: string) => userMap[m]?.online).length,
-    memberDetails: (community.members || []).map((m: string) => userMap[m] || { name: "Unknown", avatarSeed: m, online: false }),
+    memberDetails: (community.members || []).map((m: string) => userMap[m] || { name: "Unknown", avatarSeed: m, online: false, linkedUserId: m }),
     isMember: (community.members || []).includes(userId),
-    isAdmin: (community.admins || []).includes(userId),
+    isAdmin,
     pendingRequest: pendingReq ? pendingReq.status : null,
+    pendingRequestsCount: isAdmin ? (community.joinRequests || []).filter((r: any) => r.status === "pending").length : undefined,
   }
 }
 
@@ -83,13 +85,24 @@ router.put("/:id", async (req: AuthRequest, res: Response) => {
     const community = await Community.findById(req.params.id)
     if (!community) { res.status(404).json({ error: "Community not found" }); return }
     if (!(community.admins || []).includes(req.userId!)) { res.status(403).json({ error: "Not authorized" }); return }
-    const { name, description, tags, avatarSeed } = req.body
+    const { name, description, tags, avatarSeed, announcement, kickUserId } = req.body
     if (name) community.name = name.trim()
     if (description !== undefined) community.description = description.trim()
     if (tags) community.tags = tags
     if (avatarSeed) community.avatarSeed = avatarSeed
+    if (announcement !== undefined) community.announcement = announcement
+    if (kickUserId) {
+      if (!community.members.includes(kickUserId)) { res.status(400).json({ error: "User not a member" }); return }
+      community.members = community.members.filter((m) => m !== kickUserId)
+      community.admins = (community.admins || []).filter((m) => m !== kickUserId)
+      // Also remove from conversation participants
+      if (community.conversationId) {
+        await Conversation.findByIdAndUpdate(community.conversationId, { $pull: { participants: kickUserId } })
+      }
+    }
     await community.save()
-    res.json({ community })
+    const enriched = await enrichCommunity(community.toObject(), req.userId!)
+    res.json({ community: enriched })
   } catch { res.status(500).json({ error: "Server error" }) }
 })
 

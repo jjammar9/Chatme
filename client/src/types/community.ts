@@ -10,7 +10,9 @@ export interface Community {
   createdAt: string
   memberCount: number
   onlineCount: number
-  memberDetails: { name: string; avatarSeed: string; online: boolean }[]
+  memberDetails: { name: string; avatarSeed: string; online: boolean; linkedUserId?: string }[]
+  pendingRequestsCount?: number
+  announcement?: string
   isMember: boolean
   isAdmin: boolean
   pendingRequest: "pending" | null

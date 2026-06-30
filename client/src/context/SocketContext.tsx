@@ -6,7 +6,7 @@ interface SocketContextValue {
   connected: boolean
 }
 
-const SocketContext = createContext<SocketContextValue>({ socket: null, connected: false })
+export const SocketContext = createContext<SocketContextValue>({ socket: null, connected: false })
 
 export function SocketProvider({ children }: { children: ReactNode }) {
   const [socket, setSocket] = useState<Socket | null>(null)

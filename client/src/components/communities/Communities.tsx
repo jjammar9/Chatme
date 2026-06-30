@@ -174,7 +174,6 @@ export default function Communities() {
         ) : (
           <div className="grid grid-cols-3 gap-5">
             {filtered.map((c) => {
-              const pendingCount = 0 // We'll track this from joinRequests in a future update
               return (
               <div key={c._id} onClick={() => setSelectedCommunity(c)} className="bg-off-white rounded-xl border border-gray/20 p-5 hover:shadow-lg transition-shadow cursor-pointer">
                 <div className="flex items-start justify-between mb-4">
@@ -201,6 +200,9 @@ export default function Communities() {
                   <div className="flex items-center gap-2">
                     <h3 className="text-lg font-bold text-dark-purple">{c.name}</h3>
                     {c.isAdmin && <span className="text-[10px] font-semibold bg-dark-purple/10 text-dark-purple px-2 py-0.5 rounded-full">Admin</span>}
+                    {c.pendingRequestsCount && c.pendingRequestsCount > 0 ? (
+                      <span className="text-[10px] font-semibold bg-red text-off-white px-2 py-0.5 rounded-full">{c.pendingRequestsCount} pending</span>
+                    ) : null}
                   </div>
                   {c.description && <p className="text-sm text-dark-purple/50 mt-1 line-clamp-2">{c.description}</p>}
                 </div>

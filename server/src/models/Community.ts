@@ -17,6 +17,7 @@ export interface ICommunity extends Document {
   createdBy: string
   createdAt: Date
   conversationId?: string
+  announcement?: string
 }
 
 const joinRequestSchema = new Schema<IJoinRequest>({
@@ -36,6 +37,7 @@ const communitySchema = new Schema<ICommunity>({
   createdBy: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },
   conversationId: { type: String, default: "" },
+  announcement: { type: String, default: "" },
 })
 
 export default mongoose.model<ICommunity>("Community", communitySchema)
