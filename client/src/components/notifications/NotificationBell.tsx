@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react"
 import { Bell, Check, X, Loader } from "lucide-react"
-import { notifications as notificationsApi, friendRequests as friendRequestsApi } from "../../lib/api"
+import { notifications as notificationsApi, friendRequests as friendRequestsApi, communities as communitiesApi } from "../../lib/api"
 import Avatar from "../ui/Avatar"
 
 interface Notification {
   _id: string
-  type: "friend_request" | "friend_accepted" | "message"
+  type: "friend_request" | "friend_accepted" | "message" | "community_invite" | "community_join_request" | "request_accepted" | "request_declined" | "invite_accepted"
   fromUserId: string
   message: string
   relatedId: string | null
@@ -42,24 +42,67 @@ export default function NotificationBell() {
     return () => document.removeEventListener("mousedown", handleClick)
   }, [])
 
-  const handleAccept = async (notif: Notification) => {
+  const markAndRefresh = async (notifId: string) => {
+    await notificationsApi.markRead(notifId).catch(() => {})
+    await fetchNotifs()
+  }
+
+  const handleAcceptFriend = async (notif: Notification) => {
     if (!notif.relatedId) return
     setLoading(true)
     try {
       await friendRequestsApi.accept(notif.relatedId)
-      await notificationsApi.markRead(notif._id)
-      await fetchNotifs()
+      await markAndRefresh(notif._id)
     } catch { /* ignore */ }
     setLoading(false)
   }
 
-  const handleDecline = async (notif: Notification) => {
+  const handleDeclineFriend = async (notif: Notification) => {
     if (!notif.relatedId) return
     setLoading(true)
     try {
       await friendRequestsApi.decline(notif.relatedId)
-      await notificationsApi.markRead(notif._id)
-      await fetchNotifs()
+      await markAndRefresh(notif._id)
+    } catch { /* ignore */ }
+    setLoading(false)
+  }
+
+  const handleAcceptInvite = async (notif: Notification) => {
+    if (!notif.relatedId) return
+    setLoading(true)
+    try {
+      await communitiesApi.acceptInvite(notif.relatedId)
+      await markAndRefresh(notif._id)
+    } catch { /* ignore */ }
+    setLoading(false)
+  }
+
+  const handleDeclineInvite = async (notif: Notification) => {
+    if (!notif.relatedId) return
+    setLoading(true)
+    try {
+      await communitiesApi.declineInvite(notif.relatedId)
+      await markAndRefresh(notif._id)
+    } catch { /* ignore */ }
+    setLoading(false)
+  }
+
+  const handleAcceptRequest = async (notif: Notification) => {
+    if (!notif.relatedId) return
+    setLoading(true)
+    try {
+      await communitiesApi.acceptRequest(notif.relatedId, notif.fromUserId)
+      await markAndRefresh(notif._id)
+    } catch { /* ignore */ }
+    setLoading(false)
+  }
+
+  const handleDeclineRequest = async (notif: Notification) => {
+    if (!notif.relatedId) return
+    setLoading(true)
+    try {
+      await communitiesApi.declineRequest(notif.relatedId, notif.fromUserId)
+      await markAndRefresh(notif._id)
     } catch { /* ignore */ }
     setLoading(false)
   }
@@ -110,18 +153,32 @@ export default function NotificationBell() {
                       </p>
                       {n.type === "friend_request" && n.relatedId && (
                         <div className="flex items-center gap-1.5 mt-2">
-                          <button
-                            onClick={() => handleAccept(n)}
-                            disabled={loading}
-                            className="flex items-center gap-1 text-[10px] font-semibold bg-dark-purple text-off-white px-2.5 py-1 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-                            aria-label="Accept friend request"
-                          >{loading ? <Loader size="10" className="animate-spin" /> : <Check size="10" />} Accept</button>
-                          <button
-                            onClick={() => handleDecline(n)}
-                            disabled={loading}
-                            className="flex items-center gap-1 text-[10px] font-semibold bg-light-gray text-dark-purple/60 px-2.5 py-1 rounded-lg hover:bg-gray/30 transition-colors disabled:opacity-50"
-                            aria-label="Decline friend request"
-                          ><X size="10" /> Decline</button>
+                          <button onClick={() => handleAcceptFriend(n)} disabled={loading}
+                            className="flex items-center gap-1 text-[10px] font-semibold bg-dark-purple text-off-white px-2.5 py-1 rounded-lg hover:opacity-90 disabled:opacity-50"
+                            aria-label="Accept friend request">{loading ? <Loader size="10" className="animate-spin" /> : <Check size="10" />} Accept</button>
+                          <button onClick={() => handleDeclineFriend(n)} disabled={loading}
+                            className="flex items-center gap-1 text-[10px] font-semibold bg-light-gray text-dark-purple/60 px-2.5 py-1 rounded-lg hover:bg-gray/30 disabled:opacity-50"
+                            aria-label="Decline friend request"><X size="10" /> Decline</button>
+                        </div>
+                      )}
+                      {n.type === "community_invite" && n.relatedId && (
+                        <div className="flex items-center gap-1.5 mt-2">
+                          <button onClick={() => handleAcceptInvite(n)} disabled={loading}
+                            className="flex items-center gap-1 text-[10px] font-semibold bg-dark-purple text-off-white px-2.5 py-1 rounded-lg hover:opacity-90 disabled:opacity-50"
+                            aria-label="Accept invite">{loading ? <Loader size="10" className="animate-spin" /> : <Check size="10" />} Accept</button>
+                          <button onClick={() => handleDeclineInvite(n)} disabled={loading}
+                            className="flex items-center gap-1 text-[10px] font-semibold bg-light-gray text-dark-purple/60 px-2.5 py-1 rounded-lg hover:bg-gray/30 disabled:opacity-50"
+                            aria-label="Decline invite"><X size="10" /> Decline</button>
+                        </div>
+                      )}
+                      {n.type === "community_join_request" && n.relatedId && (
+                        <div className="flex items-center gap-1.5 mt-2">
+                          <button onClick={() => handleAcceptRequest(n)} disabled={loading}
+                            className="flex items-center gap-1 text-[10px] font-semibold bg-dark-purple text-off-white px-2.5 py-1 rounded-lg hover:opacity-90 disabled:opacity-50"
+                            aria-label="Accept join request">{loading ? <Loader size="10" className="animate-spin" /> : <Check size="10" />} Accept</button>
+                          <button onClick={() => handleDeclineRequest(n)} disabled={loading}
+                            className="flex items-center gap-1 text-[10px] font-semibold bg-light-gray text-dark-purple/60 px-2.5 py-1 rounded-lg hover:bg-gray/30 disabled:opacity-50"
+                            aria-label="Decline join request"><X size="10" /> Decline</button>
                         </div>
                       )}
                     </div>

@@ -10,6 +10,7 @@ import calendarRoutes from "./routes/calendar"
 import contactRoutes from "./routes/contacts"
 import fileRoutes from "./routes/files"
 import conversationRoutes from "./routes/conversations"
+import communityRoutes from "./routes/communities"
 import seedRoutes from "./routes/seed"
 import userRoutes from "./routes/users"
 import friendRequestRoutes from "./routes/friendRequests"
@@ -34,6 +35,7 @@ app.use("/api/calendar", calendarRoutes)
 app.use("/api/contacts", contactRoutes)
 app.use("/api/files", fileRoutes)
 app.use("/api/conversations", conversationRoutes)
+app.use("/api/communities", communityRoutes)
 app.use("/api/seed", seedRoutes)
 app.use("/api/users", userRoutes)
 app.use("/api/friend-requests", friendRequestRoutes)

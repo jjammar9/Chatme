@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { MessageSquare, Users, FileText, UserPlus, Send, Camera, MapPin, Calendar, ClipboardList, Search, Clock, Sparkles, X, Bot, SendHorizonal, Loader, ArrowRight } from "lucide-react"
-import { mockCommunities } from "../../data/mock"
+
 import { tasks as tasksApi, contacts as contactsApi, users as usersApi, conversations as conversationsApi, upload as uploadApi, calendar as calendarApi } from "../../lib/api"
 import { useToast } from "../../context/ToastContext"
 import Avatar from "../ui/Avatar"
@@ -38,9 +38,7 @@ function answerQuery(msg: string, tasks: Task[], contacts: { name: string; onlin
   }
 
   if (q.includes("group") || q.includes("community") || q.includes("channel")) {
-    const mocks = mockCommunities
-    const mostActive = mocks.reduce((a, b) => (a.online > b.online ? a : b))
-    return `You're in ${mocks.length} groups. Most active: "${mostActive.name}" (${mostActive.online}/${mostActive.members} online). Total members: ${mocks.reduce((s, c) => s + c.members, 0)}.`
+    return `You can browse and join communities from the Communities tab. Create your own to bring people together!`
   }
 
   if (q.includes("file") || q.includes("document") || q.includes("upload")) {
@@ -51,8 +49,6 @@ function answerQuery(msg: string, tasks: Task[], contacts: { name: string; onlin
   if (taskMatch) return `Found task "${taskMatch.title}" — ${taskMatch.status === "done" ? "completed" : taskMatch.priority + " priority"}`
   const contactMatch = contacts.find((c) => c.name.toLowerCase().includes(q))
   if (contactMatch) return `Found contact "${contactMatch.name}" — ${contactMatch.online ? "online" : "offline"}, ${contactMatch.role}`
-  const groupMatch = mockCommunities.find((c) => c.name.toLowerCase().includes(q))
-  if (groupMatch) return `Found group "${groupMatch.name}" — ${groupMatch.online}/${groupMatch.members} online, tags: ${groupMatch.tags.join(", ")}`
 
   return `I can answer questions about your workspace. Try:
 • "What's due today?" — tasks due now
@@ -69,6 +65,7 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
   const [chatOpen, setChatOpen] = useState(false)
   const [chatMsg, setChatMsg] = useState("")
   const [chatHistory, setChatHistory] = useState<{ role: "user" | "bot"; text: string }[]>([])
+  const chatScrollRef = useRef<HTMLDivElement>(null)
   const [tasks, setTasks] = useState<Task[]>([])
   const [contacts, setContacts] = useState<Contact[]>([])
   const [userResults, setUserResults] = useState<UserSearchResult[]>([])
@@ -154,7 +151,6 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
   const allSearchData = [
     ...tasks.map((t) => ({ label: t.title, category: "Task", seed: t.seed })),
     ...contacts.map((c) => ({ label: c.name, category: "Contact", seed: c.seed })),
-    ...mockCommunities.map((c) => ({ label: c.name, category: "Group", seed: c.seeds[0] })),
   ]
 
   const filteredSearch = searchQuery.trim()
@@ -300,6 +296,10 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
     setScheduleMyEmail("")
     setScheduleTheirEmail("")
   }
+
+  useEffect(() => {
+    chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: "smooth" })
+  }, [chatHistory])
 
   const handleChatSend = () => {
     if (!chatMsg.trim()) return
@@ -502,7 +502,7 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
             </div>
             <button onClick={() => setChatOpen(false)} aria-label="Close AI chat"><X size={16} className="text-off-white/60 hover:text-off-white" /></button>
           </div>
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+          <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
             {chatHistory.length === 0 && (
               <div className="text-center py-6">
                 <Bot size={28} className="text-dark-purple/20 mx-auto mb-2" />

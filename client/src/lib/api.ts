@@ -112,6 +112,34 @@ export const notifications = {
     fetch(`${BASE}/notifications/read-all`, { method: "PUT", headers: headers() }).then(handleResponse),
 }
 
+// Communities
+export const communities = {
+  list: () =>
+    fetch(`${BASE}/communities`, { headers: headers() }).then(handleResponse),
+  create: (data: Record<string, unknown>) =>
+    fetch(`${BASE}/communities`, { method: "POST", headers: headers(), body: JSON.stringify(data) }).then(handleResponse),
+  get: (id: string) =>
+    fetch(`${BASE}/communities/${id}`, { headers: headers() }).then(handleResponse),
+  update: (id: string, data: Record<string, unknown>) =>
+    fetch(`${BASE}/communities/${id}`, { method: "PUT", headers: headers(), body: JSON.stringify(data) }).then(handleResponse),
+  remove: (id: string) =>
+    fetch(`${BASE}/communities/${id}`, { method: "DELETE", headers: headers() }).then(handleResponse),
+  leave: (id: string) =>
+    fetch(`${BASE}/communities/${id}/leave`, { method: "POST", headers: headers() }).then(handleResponse),
+  requestJoin: (id: string) =>
+    fetch(`${BASE}/communities/${id}/request-join`, { method: "POST", headers: headers() }).then(handleResponse),
+  acceptRequest: (id: string, userId: string) =>
+    fetch(`${BASE}/communities/${id}/accept-request/${userId}`, { method: "POST", headers: headers() }).then(handleResponse),
+  declineRequest: (id: string, userId: string) =>
+    fetch(`${BASE}/communities/${id}/decline-request/${userId}`, { method: "POST", headers: headers() }).then(handleResponse),
+  invite: (id: string, userId: string) =>
+    fetch(`${BASE}/communities/${id}/invite`, { method: "POST", headers: headers(), body: JSON.stringify({ userId }) }).then(handleResponse),
+  acceptInvite: (id: string) =>
+    fetch(`${BASE}/communities/${id}/accept-invite`, { method: "POST", headers: headers() }).then(handleResponse),
+  declineInvite: (id: string) =>
+    fetch(`${BASE}/communities/${id}/decline-invite`, { method: "POST", headers: headers() }).then(handleResponse),
+}
+
 // Upload
 export const upload = {
   file: (file: File) => {

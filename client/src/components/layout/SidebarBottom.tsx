@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from "react"
 import { Bell, Check, X, Loader, Search, ArrowUp, ExternalLink, MessageCircle } from "lucide-react"
-import { notifications as notificationsApi, friendRequests as friendRequestsApi, users as usersApi, conversations as conversationsApi } from "../../lib/api"
+import { notifications as notificationsApi, friendRequests as friendRequestsApi, communities as communitiesApi, users as usersApi, conversations as conversationsApi } from "../../lib/api"
 import Avatar from "../ui/Avatar"
 import type { UserSearchResult } from "../../types"
 
 interface Notification {
   _id: string
-  type: "friend_request" | "friend_accepted" | "message"
+  type: "friend_request" | "friend_accepted" | "message" | "community_invite" | "community_join_request" | "request_accepted" | "request_declined" | "invite_accepted"
   fromUserId: string
   message: string
   relatedId: string | null
@@ -14,9 +14,16 @@ interface Notification {
   createdAt: string
 }
 
-function NotificationsModal({ open, onClose, onViewProfile }: { open: boolean; onClose: () => void; onViewProfile: (id: string) => void }) {
+function NotificationsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [notifs, setNotifs] = useState<Notification[]>([])
   const [loading, setLoading] = useState(false)
+  const [actionLoading, setActionLoading] = useState(false)
+
+  const markAndRefresh = async (notifId: string) => {
+    await notificationsApi.markRead(notifId).catch(() => {})
+    const data = await notificationsApi.list()
+    setNotifs(data.notifications || [])
+  }
 
   useEffect(() => {
     if (!open) return
@@ -26,10 +33,52 @@ function NotificationsModal({ open, onClose, onViewProfile }: { open: boolean; o
     }).catch(() => {}).finally(() => setLoading(false))
   }, [open])
 
+  const handleAcceptFriend = async (n: Notification) => {
+    if (!n.relatedId) return
+    setActionLoading(true)
+    try { await friendRequestsApi.accept(n.relatedId); await markAndRefresh(n._id) } catch {}
+    setActionLoading(false)
+  }
+
+  const handleDeclineFriend = async (n: Notification) => {
+    if (!n.relatedId) return
+    setActionLoading(true)
+    try { await friendRequestsApi.decline(n.relatedId); await markAndRefresh(n._id) } catch {}
+    setActionLoading(false)
+  }
+
+  const handleAcceptInvite = async (n: Notification) => {
+    if (!n.relatedId) return
+    setActionLoading(true)
+    try { await communitiesApi.acceptInvite(n.relatedId); await markAndRefresh(n._id) } catch {}
+    setActionLoading(false)
+  }
+
+  const handleDeclineInvite = async (n: Notification) => {
+    if (!n.relatedId) return
+    setActionLoading(true)
+    try { await communitiesApi.declineInvite(n.relatedId); await markAndRefresh(n._id) } catch {}
+    setActionLoading(false)
+  }
+
+  const handleAcceptRequest = async (n: Notification) => {
+    if (!n.relatedId) return
+    setActionLoading(true)
+    try { await communitiesApi.acceptRequest(n.relatedId, n.fromUserId); await markAndRefresh(n._id) } catch {}
+    setActionLoading(false)
+  }
+
+  const handleDeclineRequest = async (n: Notification) => {
+    if (!n.relatedId) return
+    setActionLoading(true)
+    try { await communitiesApi.declineRequest(n.relatedId, n.fromUserId); await markAndRefresh(n._id) } catch {}
+    setActionLoading(false)
+  }
+
   if (!open) return null
 
-  const pending = notifs.filter((n) => n.type === "friend_request" && !n.read)
-  const others = notifs.filter((n) => n.type !== "friend_request" || n.read)
+  const actionable = notifs.filter((n) => (n.type === "friend_request" || n.type === "community_invite" || n.type === "community_join_request") && !n.read)
+  const others = notifs.filter((n) => !(n.type === "friend_request" || n.type === "community_invite" || n.type === "community_join_request") || n.read)
 
   return (
     <div role="dialog" aria-modal="true" aria-label="All notifications" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
@@ -50,10 +99,10 @@ function NotificationsModal({ open, onClose, onViewProfile }: { open: boolean; o
             </div>
           ) : (
             <>
-              {pending.length > 0 && (
+              {actionable.length > 0 && (
                 <div className="mb-2">
-                  <p className="text-[10px] font-semibold text-dark-purple/40 px-3 py-2 uppercase tracking-wider">Pending Requests</p>
-                  {pending.map((n) => (
+                  <p className="text-[10px] font-semibold text-dark-purple/40 px-3 py-2 uppercase tracking-wider">Pending</p>
+                  {actionable.map((n) => (
                     <div key={n._id} className="px-3 py-2.5 mx-1 rounded-lg bg-red/5 border border-red/20 mb-1">
                       <div className="flex items-start gap-2.5">
                         <Avatar seed={n.fromUserId} size="sm" />
@@ -62,6 +111,20 @@ function NotificationsModal({ open, onClose, onViewProfile }: { open: boolean; o
                           <p className="text-[10px] text-dark-purple/40 mt-0.5">
                             {new Date(n.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                           </p>
+                          {(n.type === "friend_request" || n.type === "community_invite" || n.type === "community_join_request") && (
+                            <div className="flex items-center gap-1.5 mt-2" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={() => n.type === "friend_request" ? handleAcceptFriend(n) : n.type === "community_invite" ? handleAcceptInvite(n) : handleAcceptRequest(n)}
+                                disabled={actionLoading}
+                                className="flex items-center gap-1 text-[10px] font-semibold bg-dark-purple text-off-white px-2.5 py-1 rounded-lg hover:opacity-90 disabled:opacity-50"
+                              >{actionLoading ? <Loader size="10" className="animate-spin" /> : <Check size="10" />} Accept</button>
+                              <button
+                                onClick={() => n.type === "friend_request" ? handleDeclineFriend(n) : n.type === "community_invite" ? handleDeclineInvite(n) : handleDeclineRequest(n)}
+                                disabled={actionLoading}
+                                className="flex items-center gap-1 text-[10px] font-semibold bg-light-gray text-dark-purple/60 px-2.5 py-1 rounded-lg hover:bg-gray/30 disabled:opacity-50"
+                              ><X size="10" /> Decline</button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -70,21 +133,19 @@ function NotificationsModal({ open, onClose, onViewProfile }: { open: boolean; o
               )}
               {others.length > 0 && (
                 <div>
-                  {pending.length > 0 && <div className="border-t border-light-gray my-1" />}
-                      {others.map((n) => (
-                    <button
-                      key={n._id}
-                      onClick={() => { onClose(); if (n.relatedId) conversationsApi.markRead(n.relatedId).catch(() => {}); onViewProfile(n.fromUserId) }}
-                      className="flex items-start gap-2.5 w-full text-left px-3 py-2.5 rounded-lg hover:bg-light-gray transition-colors"
-                    >
-                      <Avatar seed={n.fromUserId} size="sm" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-dark-purple leading-relaxed">{n.message}</p>
-                        <p className="text-[10px] text-dark-purple/40 mt-0.5">
-                          {new Date(n.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-                        </p>
+                  {actionable.length > 0 && <div className="border-t border-light-gray my-1" />}
+                  {others.map((n) => (
+                    <div key={n._id} className="px-3 py-2.5 mx-1 rounded-lg hover:bg-light-gray transition-colors">
+                      <div className="flex items-start gap-2.5">
+                        <Avatar seed={n.fromUserId} size="sm" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-dark-purple leading-relaxed">{n.message}</p>
+                          <p className="text-[10px] text-dark-purple/40 mt-0.5">
+                            {new Date(n.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                          </p>
+                        </div>
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -122,7 +183,6 @@ export default function SidebarBottom({ onNavChange, onViewProfile }: { onNavCha
     const id = setInterval(fetchNotifs, 10000)
 
     const handleCleared = () => {
-      // Re-fetch notifications when messages are marked read
       setTimeout(fetchNotifs, 600)
     }
     window.addEventListener("unread-cleared", handleCleared)
@@ -151,37 +211,60 @@ export default function SidebarBottom({ onNavChange, onViewProfile }: { onNavCha
     return () => clearTimeout(searchTimeout.current)
   }, [searchQuery])
 
-  const handleAccept = async (notif: Notification) => {
+  const markAndRefresh = async (notifId: string) => {
+    await notificationsApi.markRead(notifId).catch(() => {})
+    await fetchNotifs()
+  }
+
+  const handleAcceptFriend = async (notif: Notification) => {
     if (!notif.relatedId) return
     setLoading(true)
-    try {
-      await friendRequestsApi.accept(notif.relatedId)
-      await notificationsApi.markRead(notif._id)
-      await fetchNotifs()
-    } catch { /* ignore */ }
+    try { await friendRequestsApi.accept(notif.relatedId); await markAndRefresh(notif._id) } catch {}
     setLoading(false)
   }
 
-  const handleDecline = async (notif: Notification) => {
+  const handleDeclineFriend = async (notif: Notification) => {
     if (!notif.relatedId) return
     setLoading(true)
-    try {
-      await friendRequestsApi.decline(notif.relatedId)
-      await notificationsApi.markRead(notif._id)
-      await fetchNotifs()
-    } catch { /* ignore */ }
+    try { await friendRequestsApi.decline(notif.relatedId); await markAndRefresh(notif._id) } catch {}
     setLoading(false)
   }
 
-  const pendingFriendRequests = notifs.filter((n) => n.type === "friend_request" && !n.read)
-  const otherNotifs = notifs.filter((n) => n.type !== "friend_request" || n.read)
+  const handleAcceptInvite = async (notif: Notification) => {
+    if (!notif.relatedId) return
+    setLoading(true)
+    try { await communitiesApi.acceptInvite(notif.relatedId); await markAndRefresh(notif._id) } catch {}
+    setLoading(false)
+  }
 
-  // Only show 2 notifications in the dropdown
+  const handleDeclineInvite = async (notif: Notification) => {
+    if (!notif.relatedId) return
+    setLoading(true)
+    try { await communitiesApi.declineInvite(notif.relatedId); await markAndRefresh(notif._id) } catch {}
+    setLoading(false)
+  }
+
+  const handleAcceptRequest = async (notif: Notification) => {
+    if (!notif.relatedId) return
+    setLoading(true)
+    try { await communitiesApi.acceptRequest(notif.relatedId, notif.fromUserId); await markAndRefresh(notif._id) } catch {}
+    setLoading(false)
+  }
+
+  const handleDeclineRequest = async (notif: Notification) => {
+    if (!notif.relatedId) return
+    setLoading(true)
+    try { await communitiesApi.declineRequest(notif.relatedId, notif.fromUserId); await markAndRefresh(notif._id) } catch {}
+    setLoading(false)
+  }
+
+  const actionableNotifs = notifs.filter((n) => (n.type === "friend_request" || n.type === "community_invite" || n.type === "community_join_request") && !n.read)
+  const otherNotifs = notifs.filter((n) => !(n.type === "friend_request" || n.type === "community_invite" || n.type === "community_join_request") || n.read)
   const visibleOthers = otherNotifs.slice(0, 2)
 
   return (
     <>
-      <NotificationsModal open={showAllModal} onClose={() => setShowAllModal(false)} onViewProfile={onViewProfile} />
+      <NotificationsModal open={showAllModal} onClose={() => setShowAllModal(false)} />
       <div ref={ref} className="relative border-t border-off-white/10">
         <div className="flex items-center px-3 py-3">
           <button
@@ -260,11 +343,11 @@ export default function SidebarBottom({ onNavChange, onViewProfile }: { onNavCha
                     )}
                   </div>
 
-                  {pendingFriendRequests.length > 0 && (
+                  {actionableNotifs.length > 0 && (
                     <div className="px-2 mb-1">
-                      <p className="text-[10px] font-semibold text-dark-purple/40 px-2 py-1 uppercase tracking-wider">Pending Requests</p>
-                  {pendingFriendRequests.map((n) => (
-                      <div key={n._id} onClick={() => { setOpen(false); if (n.relatedId) conversationsApi.markRead(n.relatedId).catch(() => {}); onViewProfile(n.fromUserId) }} className="px-3 py-2.5 mx-1 rounded-lg bg-red/5 border border-red/20 mb-1 cursor-pointer hover:bg-red/10 transition-colors">
+                      <p className="text-[10px] font-semibold text-dark-purple/40 px-2 py-1 uppercase tracking-wider">Pending</p>
+                      {actionableNotifs.map((n) => (
+                        <div key={n._id} className="px-3 py-2.5 mx-1 rounded-lg bg-red/5 border border-red/20 mb-1">
                           <div className="flex items-start gap-2.5">
                             <Avatar seed={n.fromUserId} size="sm" />
                             <div className="flex-1 min-w-0">
@@ -274,16 +357,14 @@ export default function SidebarBottom({ onNavChange, onViewProfile }: { onNavCha
                               </p>
                               <div className="flex items-center gap-1.5 mt-2" onClick={(e) => e.stopPropagation()}>
                                 <button
-                                  onClick={() => handleAccept(n)}
+                                  onClick={() => n.type === "friend_request" ? handleAcceptFriend(n) : n.type === "community_invite" ? handleAcceptInvite(n) : handleAcceptRequest(n)}
                                   disabled={loading}
-                                  className="flex items-center gap-1 text-[10px] font-semibold bg-dark-purple text-off-white px-2.5 py-1 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-                                  aria-label="Accept friend request"
+                                  className="flex items-center gap-1 text-[10px] font-semibold bg-dark-purple text-off-white px-2.5 py-1 rounded-lg hover:opacity-90 disabled:opacity-50"
                                 >{loading ? <Loader size="10" className="animate-spin" /> : <Check size="10" />} Accept</button>
                                 <button
-                                  onClick={() => handleDecline(n)}
+                                  onClick={() => n.type === "friend_request" ? handleDeclineFriend(n) : n.type === "community_invite" ? handleDeclineInvite(n) : handleDeclineRequest(n)}
                                   disabled={loading}
-                                  className="flex items-center gap-1 text-[10px] font-semibold bg-light-gray text-dark-purple/60 px-2.5 py-1 rounded-lg hover:bg-gray/30 transition-colors disabled:opacity-50"
-                                  aria-label="Decline friend request"
+                                  className="flex items-center gap-1 text-[10px] font-semibold bg-light-gray text-dark-purple/60 px-2.5 py-1 rounded-lg hover:bg-gray/30 disabled:opacity-50"
                                 ><X size="10" /> Decline</button>
                               </div>
                             </div>
@@ -296,7 +377,7 @@ export default function SidebarBottom({ onNavChange, onViewProfile }: { onNavCha
                   {visibleOthers.length > 0 && (
                     <div className="px-2 pb-1">
                       {visibleOthers.map((n) => (
-                        <div key={n._id} onClick={() => { setOpen(false); if (n.relatedId) conversationsApi.markRead(n.relatedId).catch(() => {}); onViewProfile(n.fromUserId) }} className="px-3 py-2.5 rounded-lg hover:bg-light-gray transition-colors cursor-pointer">
+                        <div key={n._id} className="px-3 py-2.5 rounded-lg hover:bg-light-gray transition-colors">
                           <div className="flex items-start gap-2.5">
                             <Avatar seed={n.fromUserId} size="sm" />
                             <div className="flex-1 min-w-0">
