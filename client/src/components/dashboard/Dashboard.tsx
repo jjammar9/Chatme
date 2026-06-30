@@ -479,12 +479,13 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
             </div>
 
             <div className="bg-off-white rounded-xl p-5 border border-gray/20">
-                <h2 className="text-sm font-bold text-dark-purple">Frequent</h2>
-              <div className="flex gap-3">
+              <h2 className="text-sm font-bold text-dark-purple mb-3">Frequent</h2>
+              <div className="space-y-2">
                 {contacts.slice(0, 4).map((c) => (
-                  <div key={c.seed} className="flex flex-col items-center gap-1 cursor-pointer">
+                  <div key={c.seed} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-light-gray hover:bg-gray/30 transition-colors cursor-pointer">
                     <Avatar seed={c.seed} size="md" status={c.online ? "online" : undefined} />
-                    <span className="text-[10px] text-dark-purple/70 font-medium">{c.name}</span>
+                    <span className="text-xs font-medium text-dark-purple flex-1">{c.name}</span>
+                    {c.online && <span className="w-2 h-2 rounded-full bg-green shrink-0" />}
                   </div>
                 ))}
               </div>

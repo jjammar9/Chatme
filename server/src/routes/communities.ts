@@ -9,18 +9,18 @@ const router = Router()
 router.use(authMiddleware)
 
 async function enrichCommunity(community: any, userId: string) {
-  const allIds = [...new Set<string>([...community.members, ...community.admins])]
+  const allIds = [...new Set<string>([...(community.members || []), ...(community.admins || [])])]
   const users = await User.find({ _id: { $in: allIds } }).select("name avatarSeed online").lean()
   const userMap: Record<string, any> = {}
   for (const u of users) userMap[u._id.toString()] = { name: u.name || "Unknown", avatarSeed: u.avatarSeed || u.name || u.username || "", online: u.online || false }
   const pendingReq = (community.joinRequests || []).find((r: any) => r.userId === userId && r.status === "pending")
   return {
     ...community,
-    memberCount: community.members.length,
-    onlineCount: community.members.filter((m: string) => userMap[m]?.online).length,
-    memberDetails: community.members.map((m: string) => userMap[m] || { name: "Unknown", avatarSeed: m, online: false }),
-    isMember: community.members.includes(userId),
-    isAdmin: community.admins.includes(userId),
+    memberCount: (community.members || []).length,
+    onlineCount: (community.members || []).filter((m: string) => userMap[m]?.online).length,
+    memberDetails: (community.members || []).map((m: string) => userMap[m] || { name: "Unknown", avatarSeed: m, online: false }),
+    isMember: (community.members || []).includes(userId),
+    isAdmin: (community.admins || []).includes(userId),
     pendingRequest: pendingReq ? pendingReq.status : null,
   }
 }
