@@ -128,6 +128,8 @@ export const communities = {
     fetch(`${BASE}/communities/${id}/leave`, { method: "POST", headers: headers() }).then(handleResponse),
   requestJoin: (id: string) =>
     fetch(`${BASE}/communities/${id}/request-join`, { method: "POST", headers: headers() }).then(handleResponse),
+  cancelRequest: (id: string) =>
+    fetch(`${BASE}/communities/${id}/cancel-request`, { method: "POST", headers: headers() }).then(handleResponse),
   acceptRequest: (id: string, userId: string) =>
     fetch(`${BASE}/communities/${id}/accept-request/${userId}`, { method: "POST", headers: headers() }).then(handleResponse),
   declineRequest: (id: string, userId: string) =>

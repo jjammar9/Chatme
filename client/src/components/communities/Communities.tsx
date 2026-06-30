@@ -85,6 +85,16 @@ export default function Communities() {
     setActionLoading((prev) => ({ ...prev, [id]: false }))
   }
 
+  const cancelRequest = async (id: string) => {
+    setActionLoading((prev) => ({ ...prev, [id]: true }))
+    try {
+      await communitiesApi.cancelRequest(id)
+      setList((prev) => prev.map((c) => c._id === id ? { ...c, pendingRequest: null } : c))
+      toast("Join request cancelled", "info")
+    } catch { toast("Failed to cancel request", "error") }
+    setActionLoading((prev) => ({ ...prev, [id]: false }))
+  }
+
   const handleLeave = async (id: string) => {
     setActionLoading((prev) => ({ ...prev, [id]: true }))
     try {
@@ -215,10 +225,12 @@ export default function Communities() {
                     </div>
                   ) : c.pendingRequest === "pending" ? (
                     <button
-                      disabled
-                      className="w-full py-2 rounded-lg bg-gray/30 text-sm font-semibold text-dark-purple/40 flex items-center justify-center gap-1.5 cursor-not-allowed"
+                      onClick={() => cancelRequest(c._id)}
+                      disabled={actionLoading[c._id]}
+                      className="w-full py-2 rounded-lg border border-gray/30 text-sm font-semibold text-dark-purple/60 hover:bg-light-gray transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40"
                     >
-                      <UserCheck size="14" /> Requested
+                      {actionLoading[c._id] ? <Loader size="14" className="animate-spin" /> : <X size="14" />}
+                      {actionLoading[c._id] ? "..." : "Cancel Request"}
                     </button>
                   ) : (
                     <button

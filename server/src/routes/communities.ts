@@ -123,6 +123,19 @@ router.post("/:id/request-join", async (req: AuthRequest, res: Response) => {
   } catch { res.status(500).json({ error: "Server error" }) }
 })
 
+// Cancel own join request
+router.post("/:id/cancel-request", async (req: AuthRequest, res: Response) => {
+  try {
+    const community = await Community.findById(req.params.id)
+    if (!community) { res.status(404).json({ error: "Community not found" }); return }
+    const idx = (community.joinRequests || []).findIndex((r) => r.userId === req.userId && r.status === "pending")
+    if (idx === -1) { res.status(400).json({ error: "No pending request" }); return }
+    community.joinRequests.splice(idx, 1)
+    await community.save()
+    res.json({ ok: true })
+  } catch { res.status(500).json({ error: "Server error" }) }
+})
+
 // Admin accepts join request
 router.post("/:id/accept-request/:userId", async (req: AuthRequest, res: Response) => {
   try {
