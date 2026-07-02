@@ -1,43 +1,20 @@
-import { useState, useEffect } from "react"
-import { Star, MessageCircle, Mail, Search, Plus, X, Users, Globe, Link, MapPin, Phone, Image, ChevronDown, Send, UserPlus, Calendar, ArrowLeft } from "lucide-react"
+import { useState, useEffect, useContext } from "react"
+import { Star, MessageCircle, Mail, Search, Plus, X, Users, Globe, Link, MapPin, Phone, Image, ChevronDown, Send, UserPlus, Calendar, ArrowLeft, Trash2, Pencil } from "lucide-react"
 import type { Contact, UserSearchResult } from "../../types"
-import { contacts as contactsApi, users as usersApi } from "../../lib/api"
+import { contacts as contactsApi, users as usersApi, conversations as conversationsApi } from "../../lib/api"
+import { SocketContext } from "../../context/SocketContext"
 import Avatar from "../ui/Avatar"
 import Badge from "../ui/Badge"
 import Button from "../ui/Button"
 import Modal from "../ui/Modal"
 
-const communities = [
-  { name: "Project Squad", seeds: ["Sarah", "Alex", "Maya"] },
-  { name: "Design Talks", seeds: ["Jordan", "Taylor", "Maya", "Chloe", "Mia"] },
-  { name: "Weekend Hikers", seeds: ["Taylor", "Sarah", "Alex", "Liam", "Ryan"] },
-  { name: "Book Club", seeds: ["Maya", "Jordan", "Taylor", "Ava", "Sophia"] },
-  { name: "Dev Ops", seeds: ["Alex", "Emily", "Sarah", "Ethan", "Lucas"] },
-  { name: "Photography Club", seeds: ["Jordan", "Taylor", "Maya", "Zoe", "Isabella"] },
-  { name: "Gaming Night", seeds: ["Alex", "Chris", "Jordan", "Noah", "Mason"] },
-  { name: "Startup Ideas", seeds: ["Maya", "Taylor", "Emily", "Ryan", "Lucas"] },
-  { name: "Music Lovers", seeds: ["Sarah", "Jordan", "Chris", "Chloe", "Mia"] },
-  { name: "Fitness Crew", seeds: ["Taylor", "Alex", "Sarah", "Ethan", "Noah"] },
-  { name: "AI Research", seeds: ["Emily", "Maya", "Chris", "Ryan", "Lucas"] },
-  { name: "Movie Club", seeds: ["Jordan", "Taylor", "Sarah", "Ava", "Zoe"] },
-  { name: "Foodies", seeds: ["Chloe", "Liam", "Mia", "Sophia"] },
-  { name: "Travel Buddies", seeds: ["Isabella", "Ethan", "Lucas", "Ava"] },
-  { name: "Remote Crew", seeds: ["Zoe", "Noah", "Mason", "Ryan"] },
-]
-
-const seedCommunities: Record<string, string[]> = {}
-for (const c of communities) {
-  for (const s of c.seeds) {
-    if (!seedCommunities[s]) seedCommunities[s] = []
-    seedCommunities[s].push(c.name)
-  }
-}
-
 export default function Contacts({ onChat }: { onChat: () => void }) {
+  const { socket } = useContext(SocketContext)
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [showAdd, setShowAdd] = useState(false)
+  const [editContact, setEditContact] = useState<Contact | null>(null)
   const [newName, setNewName] = useState("")
   const [newEmail, setNewEmail] = useState("")
   const [newPhone, setNewPhone] = useState("")
@@ -55,12 +32,52 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
   const [findResults, setFindResults] = useState<UserSearchResult[]>([])
   const [findLoading, setFindLoading] = useState(false)
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+  const [sharedGroups, setSharedGroups] = useState<Record<string, string[]>>({})
+
+  const currentUserId = localStorage.getItem("userId") || ""
+
+  const fetchSharedGroups = () => {
+    conversationsApi.list().then((data) => {
+      const convs = data.conversations || []
+      const groups: Record<string, string[]> = {}
+      for (const c of contacts) {
+        if (!c.linkedUserId) continue
+        const shared = convs
+          .filter((conv: any) => conv.isGroup && conv.participants?.includes(c.linkedUserId) && conv.participants?.includes(currentUserId))
+          .map((conv: any) => conv.groupName || "Unnamed")
+        groups[c._id || c.name] = shared
+      }
+      setSharedGroups(groups)
+    }).catch(() => {})
+  }
 
   useEffect(() => {
     contactsApi.list().then((data) => { setContacts(data.contacts); setLoading(false) }).catch(() => setLoading(false))
   }, [])
 
-  const refresh = () => contactsApi.list().then((data) => setContacts(data.contacts))
+  useEffect(() => {
+    if (contacts.length === 0) return
+    fetchSharedGroups()
+  }, [contacts.length])
+
+  useEffect(() => {
+    if (!socket) return
+    const handleOnline = (data: { userId: string }) => {
+      setContacts((prev) => prev.map((c) => c.linkedUserId === data.userId ? { ...c, online: true } : c))
+    }
+    const handleOffline = (data: { userId: string }) => {
+      setContacts((prev) => prev.map((c) => c.linkedUserId === data.userId ? { ...c, online: false } : c))
+    }
+    socket.on("user:online", handleOnline)
+    socket.on("user:offline", handleOffline)
+    return () => {
+      socket.off("user:online", handleOnline)
+      socket.off("user:offline", handleOffline)
+    }
+  }, [socket])
+
+  const refresh = () => contactsApi.list().then((data) => { setContacts(data.contacts); fetchSharedGroups() })
 
   const toggleFavorite = (contact: Contact) => {
     if (!contact._id) return
@@ -97,10 +114,31 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
     })
   }
 
+  const deleteContact = (id: string) => {
+    contactsApi.remove(id).then(() => {
+      setContacts((prev) => prev.filter((c) => c._id !== id))
+      if (selectedContact?._id === id) setSelectedContact(null)
+      setShowDeleteConfirm(null)
+    })
+  }
+
+  const openEdit = (contact: Contact) => {
+    setEditContact(contact)
+    setNewName(contact.name)
+    setNewSeed(contact.seed)
+    setNewEmail(contact.email)
+    setNewPhone(contact.phone || "")
+    setNewAddress(contact.address || "")
+    setNewRelationship(contact.relationship)
+    setNewWebsite(contact.website || "")
+    setNewSocials(contact.socialLinks || [])
+    setShowAdd(true)
+  }
+
   const addContact = () => {
     if (!newName.trim()) return
     const seed = newSeed.trim() || newName.split(" ")[0]
-    contactsApi.create({
+    const data = {
       name: newName.trim(), seed,
       email: newEmail.trim() || `${seed.toLowerCase()}@email.com`,
       role: "Contact", online: false, favorite: false,
@@ -109,12 +147,19 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
       relationship: newRelationship,
       website: newWebsite.trim() || undefined,
       socialLinks: newSocials.filter((s) => s.platform && s.url) || undefined,
-    }).then(() => {
+    }
+    const finish = () => {
       refresh()
       setNewName(""); setNewEmail(""); setNewPhone(""); setNewAddress("")
       setNewRelationship(undefined); setNewSeed(""); setNewWebsite(""); setNewSocials([])
+      setEditContact(null)
       setShowAdd(false)
-    })
+    }
+    if (editContact?._id) {
+      contactsApi.update(editContact._id, data).then(finish)
+    } else {
+      contactsApi.create(data).then(finish)
+    }
   }
 
   const filtered = contacts.filter((c) => {
@@ -162,7 +207,7 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
         </div>
       </div>
 
-      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Add Contact" size="md">
+      <Modal open={showAdd} onClose={() => { setShowAdd(false); setEditContact(null); setNewName(""); setNewEmail(""); setNewPhone(""); setNewAddress(""); setNewRelationship(undefined); setNewSeed(""); setNewWebsite(""); setNewSocials([]) }} title={editContact ? "Edit Contact" : "Add Contact"} size="md">
         <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
           <div className="flex items-start gap-4">
             <div className="shrink-0">
@@ -333,7 +378,7 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
               {favOpen && (
                 <div className="space-y-0 bg-off-white rounded-xl border border-gray/20 overflow-hidden">
                   {favorites.map((c) => (
-                    <ContactRow key={c._id || c.name} contact={c} onSelect={setSelectedContact} onToggleFavorite={toggleFavorite} onChat={onChat} selected={selectedContact?._id === c._id} />
+                    <ContactRow key={c._id || c.name} contact={c} onSelect={setSelectedContact} onToggleFavorite={toggleFavorite} onChat={onChat} selected={selectedContact?._id === c._id} sharedGroups={sharedGroups[c._id || c.name] || []} />
                   ))}
                 </div>
               )}
@@ -349,8 +394,8 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
             </button>
             {allOpen && (
               <div className="space-y-0 bg-off-white rounded-xl border border-gray/20 overflow-hidden">
-                {others.length > 0 ? others.map((c) => (
-                  <ContactRow key={c._id || c.name} contact={c} onSelect={setSelectedContact} onToggleFavorite={toggleFavorite} onChat={onChat} selected={selectedContact?._id === c._id} />
+                  {others.length > 0 ? others.map((c) => (
+                  <ContactRow key={c._id || c.name} contact={c} onSelect={setSelectedContact} onToggleFavorite={toggleFavorite} onChat={onChat} selected={selectedContact?._id === c._id} sharedGroups={sharedGroups[c._id || c.name] || []} />
                 )) : (
                   <div className="px-5 py-8 text-center text-base text-dark-purple/40">No contacts match your search</div>
                 )}
@@ -360,9 +405,22 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
         </div>
 
         {selectedContact && (
-          <ContactDetail contact={selectedContact} onClose={() => setSelectedContact(null)} onChat={onChat} />
+           <ContactDetail contact={selectedContact} onClose={() => setSelectedContact(null)} onChat={onChat} onEdit={openEdit} onDelete={(id) => setShowDeleteConfirm(id)} />
         )}
       </div>
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center" onClick={() => setShowDeleteConfirm(null)}>
+          <div className="bg-off-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-dark-purple mb-2">Delete Contact?</h3>
+            <p className="text-sm text-dark-purple/60 mb-4">This will permanently remove this contact from your list.</p>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setShowDeleteConfirm(null)} className="flex-1 h-10 rounded-lg bg-light-gray text-dark-purple text-sm font-semibold hover:bg-gray/30 transition-colors">Cancel</button>
+              <button onClick={() => deleteContact(showDeleteConfirm)} className="flex-1 h-10 rounded-lg bg-red text-off-white text-sm font-semibold hover:bg-red/80 transition-colors">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -376,15 +434,22 @@ const relationshipColors: Record<string, string> = {
   other: "bg-light-gray text-dark-purple/60",
 }
 
-function ContactDetail({ contact, onClose, onChat }: { contact: Contact; onClose: () => void; onChat: () => void }) {
-  const shared = seedCommunities[contact.seed] ?? []
+function ContactDetail({ contact, onClose, onChat, onEdit, onDelete }: { contact: Contact; onClose: () => void; onChat: () => void; onEdit: (c: Contact) => void; onDelete: (id: string) => void }) {
   return (
     <div className="w-80 shrink-0 border-l border-gray/20 bg-off-white flex flex-col">
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray/20">
         <h3 className="text-sm font-bold text-dark-purple">Contact Info</h3>
-        <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-light-gray text-dark-purple/40 hover:text-dark-purple transition-colors" aria-label="Close detail panel">
-          <X size="16" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button onClick={() => onEdit(contact)} className="p-1.5 rounded-lg hover:bg-light-gray text-dark-purple/40 hover:text-dark-purple transition-colors" aria-label="Edit contact">
+            <Pencil size="14" />
+          </button>
+          <button onClick={() => onDelete(contact._id!)} className="p-1.5 rounded-lg hover:bg-light-gray text-dark-purple/40 hover:text-red transition-colors" aria-label="Delete contact">
+            <Trash2 size="14" />
+          </button>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-light-gray text-dark-purple/40 hover:text-dark-purple transition-colors" aria-label="Close detail panel">
+            <X size="16" />
+          </button>
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto px-5 py-6">
         <div className="flex flex-col items-center mb-6">
@@ -438,27 +503,18 @@ function ContactDetail({ contact, onClose, onChat }: { contact: Contact; onClose
               </div>
             </div>
           )}
-          {shared.length > 0 && (
-            <div className="pt-3 border-t border-light-gray">
-              <p className="text-xs font-semibold text-dark-purple/50 mb-2">Shared Groups ({shared.length})</p>
-              <div className="flex flex-wrap gap-1.5">
-                {shared.map((cn) => (
-                  <Badge key={cn} variant="success" size="sm">{cn}</Badge>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
-      <div className="px-5 py-4 border-t border-gray/20">
-        <Button fullWidth onClick={onChat}><Send size="16" /> Send Message</Button>
+      <div className="px-5 py-4 border-t border-gray/20 flex gap-2">
+        <div className="flex-1">
+          <Button fullWidth onClick={onChat}><Send size="16" /> Message</Button>
+        </div>
       </div>
     </div>
   )
 }
 
-function ContactRow({ contact, onSelect, onToggleFavorite, onChat, selected }: { contact: Contact; onSelect: (c: Contact) => void; onToggleFavorite: (name: string) => void; onChat: () => void; selected: boolean }) {
-  const shared = seedCommunities[contact.seed] ?? []
+function ContactRow({ contact, onSelect, onToggleFavorite, onChat, selected, sharedGroups }: { contact: Contact; onSelect: (c: Contact) => void; onToggleFavorite: (name: string) => void; onChat: () => void; selected: boolean; sharedGroups: string[] }) {
   return (
     <div onClick={() => onSelect(contact)} className={`flex items-center gap-3 px-5 py-4 border-b border-light-gray last:border-0 transition-colors group cursor-pointer ${selected ? "bg-rose/20" : "hover:bg-light-gray/50"}`}>
       <div className="relative shrink-0">
@@ -488,13 +544,11 @@ function ContactRow({ contact, onSelect, onToggleFavorite, onChat, selected }: {
           {contact.socialLinks && contact.socialLinks.length > 2 && (
             <span className="text-[10px] text-dark-purple/30">+{contact.socialLinks.length - 2}</span>
           )}
-          {shared.length > 0 && (
+          {sharedGroups.length > 0 && (
             <>
               <span className="w-px h-3 bg-gray/30" />
               <Users size="10" className="text-dark-purple/30 shrink-0" />
-              {shared.slice(0, 2).map((cn) => (
-                <Badge key={cn} variant="success" size="sm">{cn}</Badge>
-              ))}
+              <span className="text-[10px] text-dark-purple/50">{sharedGroups.length} shared group{sharedGroups.length > 1 ? "s" : ""}</span>
             </>
           )}
         </div>
