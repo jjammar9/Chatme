@@ -207,6 +207,14 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
     } catch { toast("Failed to add contact", "error") }
   }
 
+  const handleClearActivity = async () => {
+    try {
+      await activityApi.clear()
+      setActivities([])
+      toast("Activity cleared", "success")
+    } catch { toast("Failed to clear activity", "error") }
+  }
+
   const handleNewMessageSend = async () => {
     if (!newMsgContact?.linkedUserId || !newMsgText.trim() || sendingMsg) return
     setSendingMsg(true)
@@ -516,7 +524,14 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
 
         <div className="bg-off-white rounded-xl p-5 border border-gray/20">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-bold text-dark-purple">Activity</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-dark-purple">Activity</h2>
+              {activities.length > 0 && (
+                <button onClick={handleClearActivity} className="text-[10px] text-dark-purple/30 hover:text-red transition-colors" aria-label="Clear all activity">
+                  Clear
+                </button>
+              )}
+            </div>
             <Clock size={16} className="text-dark-purple/30" />
           </div>
           {activities.length > 0 ? (

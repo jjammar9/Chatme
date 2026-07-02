@@ -9,6 +9,7 @@ export interface IUser extends Document {
   avatarUrl?: string
   role: string
   online: boolean
+  lastActivityClear?: Date
   createdAt: Date
 }
 
@@ -21,6 +22,7 @@ const userSchema = new Schema<IUser>({
   avatarUrl: { type: String, default: "" },
   role: { type: String, default: "User" },
   online: { type: Boolean, default: false },
+  lastActivityClear: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
 })
 

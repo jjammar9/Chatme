@@ -185,4 +185,6 @@ export const conversations = {
 export const activity = {
   list: () =>
     fetch(`${BASE}/activity`, { headers: headers() }).then(handleResponse),
+  clear: () =>
+    fetch(`${BASE}/activity`, { method: "DELETE", headers: headers() }).then(handleResponse),
 }
