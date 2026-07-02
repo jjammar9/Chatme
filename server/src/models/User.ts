@@ -6,6 +6,7 @@ export interface IUser extends Document {
   email: string
   password: string
   avatarSeed: string
+  avatarUrl?: string
   role: string
   online: boolean
   createdAt: Date
@@ -17,6 +18,7 @@ const userSchema = new Schema<IUser>({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true },
   avatarSeed: { type: String, default: "" },
+  avatarUrl: { type: String, default: "" },
   role: { type: String, default: "User" },
   online: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },

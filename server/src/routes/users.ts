@@ -12,7 +12,7 @@ router.get("/search", async (req: AuthRequest, res: Response) => {
     if (!q) {
       // Return recent users as suggestions when no query
       const users = await User.find({ _id: { $ne: req.userId } })
-        .select("name username email avatarSeed role online createdAt").sort({ createdAt: -1 }).limit(10).lean()
+        .select("name username email avatarSeed avatarUrl role online createdAt").sort({ createdAt: -1 }).limit(10).lean()
       res.json({ users }); return
     }
     const users = await User.find({
@@ -22,7 +22,7 @@ router.get("/search", async (req: AuthRequest, res: Response) => {
         { name: { $regex: q, $options: "i" } },
         { email: { $regex: q, $options: "i" } },
       ],
-    }).select("name username email avatarSeed role online createdAt").limit(10).lean()
+    }).select("name username email avatarSeed avatarUrl role online createdAt").limit(10).lean()
     res.json({ users })
   } catch {
     res.status(500).json({ error: "Server error" })
@@ -31,7 +31,7 @@ router.get("/search", async (req: AuthRequest, res: Response) => {
 
 router.get("/by-id/:id", async (req: AuthRequest, res: Response) => {
   try {
-    const user = await User.findById(req.params.id).select("name username email avatarSeed role online createdAt")
+    const user = await User.findById(req.params.id).select("name username email avatarSeed avatarUrl role online createdAt")
     if (!user) { res.status(404).json({ error: "User not found" }); return }
     res.json({ user })
   } catch {
@@ -44,7 +44,7 @@ router.post("/batch", async (req: AuthRequest, res: Response) => {
     const { ids } = req.body
     if (!Array.isArray(ids) || ids.length === 0) { res.json({ users: [] }); return }
     const users = await User.find({ _id: { $in: ids } })
-      .select("name username avatarSeed role online createdAt").lean()
+      .select("name username avatarSeed avatarUrl role online createdAt").lean()
     res.json({ users })
   } catch {
     res.status(500).json({ error: "Server error" })

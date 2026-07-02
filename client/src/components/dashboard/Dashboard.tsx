@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type ReactNode } from "react"
-import { MessageSquare, Users, FileText, UserPlus, Send, Camera, MapPin, Calendar, ClipboardList, Search, Clock, Sparkles, X, Bot, SendHorizonal, Loader, ArrowRight } from "lucide-react"
+import { MessageSquare, Users, FileText, UserPlus, Send, Camera, MapPin, Calendar, ClipboardList, Search, Clock, Sparkles, X, Bot, SendHorizonal, Loader, ArrowRight, Zap, Star } from "lucide-react"
 
 import { tasks as tasksApi, contacts as contactsApi, users as usersApi, conversations as conversationsApi, upload as uploadApi, calendar as calendarApi, activity as activityApi } from "../../lib/api"
 import { useToast } from "../../context/ToastContext"
@@ -92,6 +92,7 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
   const [scheduleTheirEmail, setScheduleTheirEmail] = useState("")
   const [scheduling, setScheduling] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [showAllActivity, setShowAllActivity] = useState(false)
   const [activities, setActivities] = useState<{ type: string; text: string; time: string; id: string }[]>([])
   const [upcomingEvents, setUpcomingEvents] = useState<{ _id?: string; title: string; date: number; month: number; year: number; time: string }[]>([])
 
@@ -457,132 +458,162 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
           ))}
         </div>
 
-        <div className="grid grid-cols-5 gap-4">
-          <div className="col-span-2 bg-off-white rounded-xl p-5 border border-gray/20 max-h-[400px] flex flex-col">
-            <h2 className="text-sm font-bold text-dark-purple mb-4 shrink-0">Activity</h2>
-            <div className="flex-1 overflow-y-auto space-y-0">
-              {activities.length > 0 ? (
-                activities.slice(0, 10).map((a, i) => {
-                  const icons: Record<string, ReactNode> = {
-                    message: <Send size={12} className="text-rose" />,
-                    notification: <Users size={12} className="text-light-green" />,
-                    task: <ClipboardList size={12} className="text-dark-purple/60" />,
-                    event: <Calendar size={12} className="text-dark-purple/40" />,
-                  }
-                  const ago = Math.floor((Date.now() - new Date(a.time).getTime()) / 60000)
-                  const timeStr = ago < 1 ? "just now" : ago < 60 ? `${ago}m ago` : `${Math.floor(ago / 60)}h ago`
-                  return (
-                    <div key={a.id || i} className="flex items-start gap-3 py-2.5 border-b border-light-gray last:border-0">
-                      <span className="w-6 h-6 rounded-full bg-light-gray flex items-center justify-center shrink-0 mt-0.5">
-                        {icons[a.type] || <div className="w-2 h-2 rounded-full bg-dark-purple" />}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-dark-purple leading-relaxed">{a.text}</p>
-                        <p className="text-[10px] text-dark-purple/30 mt-0.5">{timeStr}</p>
-                      </div>
-                    </div>
-                  )
-                })
-              ) : (
-                <div className="py-8 text-center">
-                  <p className="text-sm text-dark-purple/40">No recent activity</p>
-                  <p className="text-xs text-dark-purple/30 mt-1">Start using Chatme to see activity here</p>
-                </div>
-              )}
-            </div>
+        <div className="bg-off-white rounded-xl p-5 border border-gray/20">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-bold text-dark-purple">Upcoming</h2>
+            <Calendar size={16} className="text-dark-purple/30" />
           </div>
+          {upcomingEvents.length > 0 ? (
+            <div className="grid grid-cols-3 gap-4">
+              {upcomingEvents.map((e, i) => (
+                <div key={e._id || i} className="flex items-start gap-3 bg-light-gray rounded-xl p-4">
+                  <div className="text-center w-12 shrink-0">
+                    <p className="text-xl font-bold text-dark-purple leading-none">{e.date}</p>
+                    <p className="text-[11px] font-semibold text-dark-purple/50 uppercase tracking-wide">
+                      {new Date(e.year, e.month - 1, e.date).toLocaleString("default", { month: "short" })}
+                    </p>
+                  </div>
+                  <div className="flex-1 min-w-0 self-center">
+                    <p className="text-sm font-semibold text-dark-purple truncate">{e.title}</p>
+                    <p className="text-xs text-dark-purple/50 mt-0.5">{e.time}</p>
+                  </div>
+                  <span className="w-1.5 h-1.5 rounded-full bg-green shrink-0 mt-2" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 py-4">
+              <Calendar size={18} className="text-dark-purple/20" />
+              <p className="text-sm text-dark-purple/40">No upcoming events</p>
+            </div>
+          )}
+        </div>
 
-          <div className="col-span-1 bg-off-white rounded-xl p-5 border border-gray/20">
-            <h2 className="text-sm font-bold text-dark-purple mb-3">Upcoming</h2>
-            {upcomingEvents.length > 0 ? (
-              <div className="space-y-3">
-                {upcomingEvents.map((e, i) => (
-                  <div key={e._id || i} className="flex items-start gap-2">
-                    <div className="text-center w-10 shrink-0">
-                      <p className="text-lg font-bold text-dark-purple leading-none">{e.date}</p>
-                      <p className="text-[10px] text-dark-purple/40 uppercase">
-                        {new Date(e.year, e.month - 1, e.date).toLocaleString("default", { month: "short" })}
-                      </p>
-                    </div>
+        <div className="bg-off-white rounded-xl p-5 border border-gray/20">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-bold text-dark-purple">Quick Actions</h2>
+            <Zap size={16} className="text-dark-purple/30" />
+          </div>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { icon: Send, color: "bg-dark-purple", label: "New Message" },
+              { icon: Camera, color: "bg-rose", label: "Share Photo" },
+              { icon: MapPin, color: "bg-light-green", label: "Send Location" },
+              { icon: Calendar, color: "bg-dark-purple/10", label: "Schedule Meeting" },
+            ].map((action, i) => {
+              const AIcon = action.icon
+              return (
+                <button key={i} onClick={action.label === "New Message" ? () => setShowNewMsg(true) : action.label === "Share Photo" ? () => setShowSharePhoto(true) : action.label === "Send Location" ? () => setShowSendLocation(true) : action.label === "Schedule Meeting" ? () => setShowSchedule(true) : undefined} className="flex flex-col items-center gap-2 bg-light-gray hover:bg-gray/30 transition-colors rounded-xl p-5 text-center">
+                  <span className={`w-10 h-10 rounded-xl ${action.color} flex items-center justify-center`}>
+                    <AIcon size={18} className={action.color === "bg-dark-purple" ? "text-off-white" : "text-dark-purple"} />
+                  </span>
+                  <span className="text-sm font-medium text-dark-purple">{action.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="bg-off-white rounded-xl p-5 border border-gray/20">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-bold text-dark-purple">Activity</h2>
+            <Clock size={16} className="text-dark-purple/30" />
+          </div>
+          {activities.length > 0 ? (
+            <div className="flex-1 space-y-2">
+              {activities.slice(0, showAllActivity ? activities.length : 4).map((a, i) => {
+                const icons: Record<string, ReactNode> = {
+                  message: <Send size={14} className="text-rose" />,
+                  notification: <Users size={14} className="text-light-green" />,
+                  task: <ClipboardList size={14} className="text-dark-purple/60" />,
+                  event: <Calendar size={14} className="text-dark-purple/40" />,
+                }
+                const ago = Math.floor((Date.now() - new Date(a.time).getTime()) / 60000)
+                const timeStr = ago < 1 ? "just now" : ago < 60 ? `${ago}m ago` : `${Math.floor(ago / 60)}h ago`
+                return (
+                  <div key={a.id || i} className="flex items-start gap-3 bg-light-gray rounded-xl p-3.5">
+                    <span className="w-7 h-7 rounded-lg bg-off-white flex items-center justify-center shrink-0 mt-0.5">
+                      {icons[a.type] || <div className="w-2 h-2 rounded-full bg-dark-purple" />}
+                    </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-dark-purple truncate">{e.title}</p>
-                      <p className="text-[10px] text-dark-purple/40">{e.time}</p>
+                      <p className="text-xs text-dark-purple leading-relaxed">{a.text}</p>
+                      <p className="text-[10px] text-dark-purple/30 mt-0.5">{timeStr}</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="py-8 text-center">
+              <p className="text-sm text-dark-purple/40">No recent activity</p>
+              <p className="text-xs text-dark-purple/30 mt-1">Start using Chatme to see activity here</p>
+            </div>
+          )}
+          {activities.length > 4 && !showAllActivity && (
+            <button onClick={() => setShowAllActivity(true)} className="w-full mt-3 py-2.5 rounded-xl bg-light-gray hover:bg-gray/30 transition-colors text-xs font-semibold text-dark-purple/50">
+              See all ({activities.length})
+            </button>
+          )}
+        </div>
+
+        <div className="bg-off-white rounded-xl p-5 border border-gray/20">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-bold text-dark-purple">Continue Tasks</h2>
+            <ClipboardList size={16} className="text-dark-purple/30" />
+          </div>
+          {continueTasks.length > 0 ? (
+            <div className="space-y-2">
+              {continueTasks.map((t) => (
+                <div key={t._id} className="flex items-center gap-3 bg-light-gray rounded-xl p-3.5">
+                  <Avatar seed={t.seed || t.title} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-dark-purple truncate">{t.title}</p>
+                    <p className="text-[11px] text-dark-purple/50">
+                      {t.priority && <span className="font-medium capitalize">{t.priority}</span>}
+                      {t.dueDate && <span> · Due {formatTime(t.dueDate)}</span>}
+                    </p>
+                  </div>
+                  <span className={`text-[10px] font-medium px-2.5 py-1 rounded-full capitalize ${t.priority === "urgent" ? "bg-red/20 text-dark-purple" : "bg-off-white text-dark-purple/60"}`}>{t.status}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-8 text-center">
+              <p className="text-sm text-dark-purple/40">All tasks completed</p>
+              <p className="text-xs text-dark-purple/30 mt-1">Great work!</p>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-off-white rounded-xl p-5 border border-gray/20">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-bold text-dark-purple">Frequent & Favorite Contacts</h2>
+            <Users size={16} className="text-dark-purple/30" />
+          </div>
+          {contacts.length > 0 ? (
+            <div className="grid grid-cols-4 gap-4">
+              {contacts
+                .sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0))
+                .slice(0, 8)
+                .map((c) => (
+                  <div key={c.seed} className="flex items-center gap-3 rounded-xl bg-light-gray hover:bg-gray/30 transition-colors p-3.5 cursor-pointer">
+                    <Avatar seed={c.seed} size="md" status={c.online ? "online" : undefined} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-dark-purple truncate flex items-center gap-1">
+                        {c.name}
+                        {c.favorite && <Star size={10} className="text-dark-purple/40 shrink-0" />}
+                      </p>
+                      {c.online && <p className="text-[10px] text-green">Online</p>}
                     </div>
                   </div>
                 ))}
-              </div>
-            ) : (
-              <div className="py-6 text-center">
-                <Calendar size={20} className="text-dark-purple/20 mx-auto mb-1" />
-                <p className="text-xs text-dark-purple/40">No upcoming events</p>
-              </div>
-            )}
-          </div>
-
-          <div className="col-span-2 space-y-4">
-            <div className="bg-off-white rounded-xl p-5 border border-gray/20">
-              <h2 className="text-sm font-bold text-dark-purple mb-4">Continue Tasks</h2>
-              {continueTasks.length > 0 ? (
-                <div className="space-y-0">
-                  {continueTasks.map((t) => (
-                    <div key={t._id} className="flex items-center gap-3 py-3 border-b border-light-gray last:border-0">
-                      <Avatar seed={t.seed || t.title} size="sm" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-dark-purple truncate">{t.title}</p>
-                        <p className="text-[11px] text-dark-purple/50">
-                          {t.priority && <span className="font-medium capitalize">{t.priority}</span>}
-                          {t.dueDate && <span> · Due {formatTime(t.dueDate)}</span>}
-                        </p>
-                      </div>
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full capitalize ${t.priority === "urgent" ? "bg-red/20 text-dark-purple" : "bg-light-gray text-dark-purple/60"}`}>{t.status}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-8 text-center">
-                  <p className="text-sm text-dark-purple/40">All tasks completed</p>
-                  <p className="text-xs text-dark-purple/30 mt-1">Great work!</p>
-                </div>
-              )}
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-off-white rounded-xl p-5 border border-gray/20">
-                <h2 className="text-sm font-bold text-dark-purple mb-3">Quick Actions</h2>
-                <div className="space-y-2">
-                  {[
-                    { icon: Send, color: "bg-dark-purple", label: "New Message" },
-                    { icon: Camera, color: "bg-rose", label: "Share Photo" },
-                    { icon: MapPin, color: "bg-light-green", label: "Send Location" },
-                    { icon: Calendar, color: "bg-dark-purple/10", label: "Schedule Meeting" },
-                  ].map((action, i) => {
-                    const AIcon = action.icon
-                    return (
-                      <button key={i} onClick={action.label === "New Message" ? () => setShowNewMsg(true) : action.label === "Share Photo" ? () => setShowSharePhoto(true) : action.label === "Send Location" ? () => setShowSendLocation(true) : action.label === "Schedule Meeting" ? () => setShowSchedule(true) : undefined} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-light-gray hover:bg-gray/30 transition-colors text-left">
-                        <span className={`w-7 h-7 rounded-md ${action.color} flex items-center justify-center`}>
-                          <AIcon size={12} className={action.color === "bg-dark-purple" ? "text-off-white" : "text-dark-purple"} />
-                        </span>
-                        <span className="text-xs font-medium text-dark-purple">{action.label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div className="bg-off-white rounded-xl p-5 border border-gray/20">
-                <h2 className="text-sm font-bold text-dark-purple mb-3">Frequent</h2>
-                <div className="space-y-2">
-                  {contacts.slice(0, 4).map((c) => (
-                    <div key={c.seed} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-light-gray hover:bg-gray/30 transition-colors cursor-pointer">
-                      <Avatar seed={c.seed} size="md" status={c.online ? "online" : undefined} />
-                      <span className="text-xs font-medium text-dark-purple flex-1">{c.name}</span>
-                      {c.online && <span className="w-2 h-2 rounded-full bg-green shrink-0" />}
-                    </div>
-                  ))}
-                </div>
-              </div>
+          ) : (
+            <div className="py-8 text-center">
+              <p className="text-sm text-dark-purple/40">No contacts yet</p>
+              <p className="text-xs text-dark-purple/30 mt-1">Add contacts to see them here</p>
             </div>
-          </div>
+          )}
         </div>
 
       </>)}

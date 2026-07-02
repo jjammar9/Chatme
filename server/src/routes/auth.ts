@@ -24,7 +24,7 @@ router.post("/register", async (req: Request, res: Response) => {
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET || "", { expiresIn: "7d" })
     res.status(201).json({
       token,
-      user: { id: user._id, name: user.name, username: user.username, email: user.email, avatarSeed: user.avatarSeed, role: user.role },
+      user: { id: user._id, name: user.name, username: user.username, email: user.email, avatarSeed: user.avatarSeed, avatarUrl: user.avatarUrl, role: user.role },
     })
   } catch (err) {
     res.status(500).json({ error: "Server error" })
@@ -51,7 +51,7 @@ router.post("/login", async (req: Request, res: Response) => {
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET || "", { expiresIn: "7d" })
     res.json({
       token,
-      user: { id: user._id, name: user.name, username: user.username, email: user.email, avatarSeed: user.avatarSeed, role: user.role },
+      user: { id: user._id, name: user.name, username: user.username, email: user.email, avatarSeed: user.avatarSeed, avatarUrl: user.avatarUrl, role: user.role },
     })
   } catch {
     res.status(500).json({ error: "Server error" })
@@ -65,7 +65,24 @@ router.get("/me", authMiddleware, async (req: AuthRequest, res: Response) => {
       res.status(404).json({ error: "User not found" })
       return
     }
-    res.json({ user: { id: user._id, name: user.name, username: user.username, email: user.email, avatarSeed: user.avatarSeed, role: user.role, online: user.online } })
+    res.json({ user: { id: user._id, name: user.name, username: user.username, email: user.email, avatarSeed: user.avatarSeed, avatarUrl: user.avatarUrl, role: user.role, online: user.online } })
+  } catch {
+    res.status(500).json({ error: "Server error" })
+  }
+})
+
+router.put("/me", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const { name, avatarUrl } = req.body
+    const update: Record<string, string> = {}
+    if (name) update.name = name
+    if (avatarUrl !== undefined) update.avatarUrl = avatarUrl
+    const user = await User.findByIdAndUpdate(req.userId, update, { new: true }).select("-password")
+    if (!user) {
+      res.status(404).json({ error: "User not found" })
+      return
+    }
+    res.json({ user: { id: user._id, name: user.name, username: user.username, email: user.email, avatarSeed: user.avatarSeed, avatarUrl: user.avatarUrl, role: user.role, online: user.online } })
   } catch {
     res.status(500).json({ error: "Server error" })
   }

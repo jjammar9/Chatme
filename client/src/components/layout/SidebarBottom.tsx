@@ -273,7 +273,7 @@ export default function SidebarBottom({ onNavChange, onViewProfile }: { onNavCha
             aria-label="Open profile and notifications"
           >
             <div className="relative shrink-0">
-              <Avatar seed={userData.username || userData.name || "user"} size="md" status="online" />
+              <Avatar seed={userData.username || userData.name || "user"} imageUrl={userData.avatarUrl} size="md" status="online" />
               {unread > 0 && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-red text-off-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-dark-purple">
                   {unread > 9 ? "9+" : unread}

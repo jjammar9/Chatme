@@ -24,6 +24,8 @@ export const auth = {
     fetch(`${BASE}/auth/register`, { method: "POST", headers: headers(), body: JSON.stringify({ name, username, email, password }) }).then(handleResponse),
   me: () =>
     fetch(`${BASE}/auth/me`, { headers: headers() }).then(handleResponse),
+  updateProfile: (data: Record<string, unknown>) =>
+    fetch(`${BASE}/auth/me`, { method: "PUT", headers: headers(), body: JSON.stringify(data) }).then(handleResponse),
 }
 
 // Tasks

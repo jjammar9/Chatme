@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from "react"
-import { Star, MessageCircle, Mail, Search, Plus, X, Users, Globe, Link, MapPin, Phone, Image, ChevronDown, Send, UserPlus, Calendar, ArrowLeft, Trash2, Pencil } from "lucide-react"
+import { Star, MessageCircle, Mail, Search, Plus, X, Users, Globe, Link, MapPin, Phone, Image, ChevronDown, Send, UserPlus, Calendar, ArrowLeft, Trash2, Pencil, Camera, Loader as LoaderIcon } from "lucide-react"
 import type { Contact, UserSearchResult } from "../../types"
-import { contacts as contactsApi, users as usersApi, conversations as conversationsApi } from "../../lib/api"
+import { contacts as contactsApi, users as usersApi, conversations as conversationsApi, upload as uploadApi } from "../../lib/api"
 import { SocketContext } from "../../context/SocketContext"
 import Avatar from "../ui/Avatar"
 import Badge from "../ui/Badge"
@@ -34,6 +34,8 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const [sharedGroups, setSharedGroups] = useState<Record<string, string[]>>({})
+  const [photoUploading, setPhotoUploading] = useState(false)
+  const [photoUrl, setPhotoUrl] = useState("")
 
   const currentUserId = localStorage.getItem("userId") || ""
 
@@ -122,10 +124,24 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
     })
   }
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhotoUploading(true)
+    try {
+      const data = await uploadApi.file(file)
+      setPhotoUrl(data.url)
+    } catch {
+      // upload failed
+    }
+    setPhotoUploading(false)
+  }
+
   const openEdit = (contact: Contact) => {
     setEditContact(contact)
     setNewName(contact.name)
     setNewSeed(contact.seed)
+    setPhotoUrl(contact.avatarUrl || "")
     setNewEmail(contact.email)
     setNewPhone(contact.phone || "")
     setNewAddress(contact.address || "")
@@ -140,6 +156,7 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
     const seed = newSeed.trim() || newName.split(" ")[0]
     const data = {
       name: newName.trim(), seed,
+      avatarUrl: photoUrl || undefined,
       email: newEmail.trim() || `${seed.toLowerCase()}@email.com`,
       role: "Contact", online: false, favorite: false,
       phone: newPhone.trim() || undefined,
@@ -152,6 +169,7 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
       refresh()
       setNewName(""); setNewEmail(""); setNewPhone(""); setNewAddress("")
       setNewRelationship(undefined); setNewSeed(""); setNewWebsite(""); setNewSocials([])
+      setPhotoUrl("")
       setEditContact(null)
       setShowAdd(false)
     }
@@ -207,11 +225,15 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
         </div>
       </div>
 
-      <Modal open={showAdd} onClose={() => { setShowAdd(false); setEditContact(null); setNewName(""); setNewEmail(""); setNewPhone(""); setNewAddress(""); setNewRelationship(undefined); setNewSeed(""); setNewWebsite(""); setNewSocials([]) }} title={editContact ? "Edit Contact" : "Add Contact"} size="md">
+      <Modal open={showAdd} onClose={() => { setShowAdd(false); setEditContact(null); setNewName(""); setNewEmail(""); setNewPhone(""); setNewAddress(""); setNewRelationship(undefined); setNewSeed(""); setNewWebsite(""); setNewSocials([]); setPhotoUrl("") }} title={editContact ? "Edit Contact" : "Add Contact"} size="md">
         <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
           <div className="flex items-start gap-4">
-            <div className="shrink-0">
-              <Avatar seed={newSeed.trim() || newName.trim() || "user"} size="xl" />
+            <div className="shrink-0 relative group">
+              <Avatar seed={newSeed.trim() || newName.trim() || "user"} imageUrl={photoUrl} size="xl" />
+              <label className="absolute inset-0 rounded-lg bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
+                {photoUploading ? <LoaderIcon size="16" className="animate-spin text-white" /> : <Camera size="16" className="text-white" />}
+                <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" aria-label="Upload photo" />
+              </label>
             </div>
             <div className="flex-1">
               <label className="text-xs font-semibold text-dark-purple/50 mb-1.5 block">Full Name *</label>

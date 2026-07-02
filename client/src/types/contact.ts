@@ -3,6 +3,7 @@ export interface Contact {
   linkedUserId?: string
   name: string
   seed: string
+  avatarUrl?: string
   email: string
   role: string
   online: boolean
@@ -20,6 +21,7 @@ export interface UserSearchResult {
   username: string
   email: string
   avatarSeed: string
+  avatarUrl?: string
   role: string
   online: boolean
   createdAt?: string

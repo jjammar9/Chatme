@@ -4,6 +4,7 @@ type AvatarSize = "sm" | "md" | "lg" | "xl"
 
 interface AvatarProps {
   seed?: string
+  imageUrl?: string
   alt?: string
   size?: AvatarSize
   status?: "online" | "offline" | "away"
@@ -25,6 +26,7 @@ const statusDotStyles: Record<string, string> = {
 
 export default function Avatar({
   seed,
+  imageUrl,
   alt = "",
   size = "md",
   status,
@@ -35,7 +37,13 @@ export default function Avatar({
       <div
         className={`${sizeStyles[size]} rounded-lg overflow-hidden bg-light-gray`}
       >
-        {seed ? (
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={alt}
+            className="w-full h-full object-cover"
+          />
+        ) : seed ? (
           <img
             src={getAvatarUrl(seed)}
             alt={alt}

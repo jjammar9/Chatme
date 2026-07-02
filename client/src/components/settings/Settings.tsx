@@ -1,7 +1,9 @@
 import { useState } from "react"
-import { User, Shield, Bell, Palette, EyeOff, MessageCircle, Database, Info, Sun, Moon, Smartphone, Monitor, Camera, Check, X, Trash2, ChevronRight, Globe, Wifi, Search } from "lucide-react"
+import { User, Shield, Bell, Palette, EyeOff, MessageCircle, Database, Info, Sun, Moon, Smartphone, Monitor, Camera, Check, X, Trash2, ChevronRight, Globe, Wifi, Search, Loader } from "lucide-react"
 import type { SettingsCategory, CategoryConfig } from "../../types"
 import { useTheme } from "../../context/ThemeContext"
+import { upload as uploadApi, auth as authApi } from "../../lib/api"
+import Avatar from "../ui/Avatar"
 
 const categories: CategoryConfig[] = [
   { key: "profile", label: "Profile", icon: User },
@@ -37,8 +39,11 @@ export default function Settings() {
   const [activeCat, setActiveCat] = useState<SettingsCategory>("profile")
   const [search, setSearch] = useState("")
 
-  const [name, setName] = useState("Jamie Rivera")
-  const [email, setEmail] = useState("jamie.r@chatme.app")
+  const userData = JSON.parse(localStorage.getItem("user") || "{}")
+  const [name, setName] = useState(userData.name || "User")
+  const [email, setEmail] = useState(userData.email || "")
+  const [avatarUrl, setAvatarUrl] = useState(userData.avatarUrl || "")
+  const [avatarUploading, setAvatarUploading] = useState(false)
   const [status, setStatus] = useState("Building something cool ✨")
   const [notifMessages, setNotifMessages] = useState(true)
   const [notifGroups, setNotifGroups] = useState(true)
@@ -59,7 +64,33 @@ export default function Settings() {
   const [tempName, setTempName] = useState(name)
   const [tempStatus, setTempStatus] = useState(status)
 
-  const saveName = () => { if (tempName.trim()) setName(tempName.trim()); setEditingName(false) }
+  const updateUserInStorage = (updates: Record<string, string>) => {
+    const user = JSON.parse(localStorage.getItem("user") || "{}")
+    Object.assign(user, updates)
+    localStorage.setItem("user", JSON.stringify(user))
+  }
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAvatarUploading(true)
+    try {
+      const data = await uploadApi.file(file)
+      setAvatarUrl(data.url)
+      updateUserInStorage({ avatarUrl: data.url })
+      await authApi.updateProfile({ avatarUrl: data.url })
+    } catch { /* upload failed */ }
+    setAvatarUploading(false)
+  }
+
+  const saveName = () => {
+    if (tempName.trim()) {
+      setName(tempName.trim())
+      updateUserInStorage({ name: tempName.trim() })
+      authApi.updateProfile({ name: tempName.trim() }).catch(() => {})
+    }
+    setEditingName(false)
+  }
   const saveStatus = () => { if (tempStatus.trim()) setStatus(tempStatus.trim()); setEditingStatus(false) }
 
   const colors = [
@@ -114,14 +145,13 @@ export default function Settings() {
         <div className="px-8 py-6">
           {shownCat === "profile" && (
             <div className="max-w-2xl space-y-6">
-              <div className="flex items-center gap-5">
-                <div className="relative">
-                  <div className="w-20 h-20 rounded-2xl overflow-hidden bg-light-gray ring-2 ring-off-white shadow-md">
-                    <img src={`https://api.dicebear.com/9.x/avataaars/svg?seed=Jamie&backgroundColor=eddbda`} alt="" className="w-full h-full object-cover" />
-                  </div>
-                  <button className="absolute -bottom-1 -right-1 w-6 h-6 rounded-lg bg-dark-purple text-off-white flex items-center justify-center shadow-sm">
-                    <Camera size={12} />
-                  </button>
+                <div className="flex items-center gap-5">
+                <div className="relative group">
+                  <Avatar seed={userData.username || userData.name || "user"} imageUrl={avatarUrl} size="xl" className="ring-2 ring-off-white shadow-md" />
+                  <label className="absolute -bottom-1 -right-1 w-7 h-7 rounded-lg bg-dark-purple text-off-white flex items-center justify-center shadow-sm cursor-pointer hover:bg-dark-purple/90 transition-colors">
+                    {avatarUploading ? <Loader size="14" className="animate-spin" /> : <Camera size={14} />}
+                    <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" aria-label="Upload avatar" />
+                  </label>
                 </div>
                 <div className="flex-1 min-w-0">
                   {editingName ? (

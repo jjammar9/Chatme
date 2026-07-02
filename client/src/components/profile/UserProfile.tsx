@@ -94,7 +94,7 @@ export default function UserProfile({ userId, onBack, onChat }: { userId: string
       <div className="flex-1 flex items-start justify-center px-8 py-10">
         <div className="w-full max-w-lg bg-off-white rounded-2xl border border-gray/20 p-8">
           <div className="flex flex-col items-center mb-6">
-            <Avatar seed={user.avatarSeed || user.username} size="xl" status={user.online ? "online" : undefined} />
+            <Avatar seed={user.avatarSeed || user.username} imageUrl={user.avatarUrl} size="xl" status={user.online ? "online" : undefined} />
             <h1 className="text-2xl font-bold text-dark-purple mt-4">{user.name}</h1>
             <p className="text-sm text-dark-purple/50">@{user.username}</p>
             <div className="flex items-center gap-2 mt-2">

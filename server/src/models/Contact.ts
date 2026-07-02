@@ -5,6 +5,7 @@ export interface IContact extends Document {
   linkedUserId?: string
   name: string
   seed: string
+  avatarUrl?: string
   email: string
   role: string
   online: boolean
@@ -22,6 +23,7 @@ const contactSchema = new Schema<IContact>({
   linkedUserId: { type: String, default: null },
   name: { type: String, required: true },
   seed: { type: String, default: "" },
+  avatarUrl: { type: String, default: "" },
   email: { type: String, default: "" },
   role: { type: String, default: "" },
   online: { type: Boolean, default: false },
