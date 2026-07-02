@@ -3,7 +3,6 @@ import { ExternalLink, MessageCircle, Search, X, Loader, UserPlus, Users } from 
 import Avatar from "../ui/Avatar"
 import { conversations, users, contacts as contactsApi } from "../../lib/api"
 import { useSocket } from "../../context/SocketContext"
-import { getAvatarUrl } from "../../lib/utils"
 
 import type { Conversation } from "../../types/conversation"
 

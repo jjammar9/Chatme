@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useContext } from "react"
-import { ArrowLeft, Send, Loader, Users, X, Pin, Trash2 } from "lucide-react"
+import { ArrowLeft, Send, Loader, Users, X, Pin } from "lucide-react"
 import Avatar from "../ui/Avatar"
 import { conversations as conversationsApi, communities as communitiesApi } from "../../lib/api"
 import { formatTime } from "../../lib/utils"
@@ -17,7 +17,9 @@ export default function CommunityDetail({ community, onBack }: Props) {
   const { toast } = useToast()
   const { socket } = useContext(SocketContext)
   const currentUserId = localStorage.getItem("userId") || ""
-  const currentUserName = JSON.parse(localStorage.getItem("user") || "{}").name || "You"
+  const currentUserData = JSON.parse(localStorage.getItem("user") || "{}")
+  const currentUserName = currentUserData.name || "You"
+  const currentUserSeed = currentUserData.username || currentUserData.avatarSeed || currentUserName
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [text, setText] = useState("")
@@ -29,7 +31,7 @@ export default function CommunityDetail({ community, onBack }: Props) {
   const [showKickConfirm, setShowKickConfirm] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
-  const isAdmin = community.admins?.includes(currentUserId)
+  const isAdmin = community.admins?.includes(currentUserId) ?? false
 
   useEffect(() => {
     if (!community.conversationId) { setLoading(false); return }
@@ -80,7 +82,7 @@ export default function CommunityDetail({ community, onBack }: Props) {
     const tempId = `temp-${Date.now()}`
     const optimistic: Message = {
       _id: tempId, conversationId: community.conversationId, senderId: currentUserId,
-      content, type: "text", senderName: currentUserName, senderSeed: currentUserName,
+      content, type: "text", senderName: currentUserName, senderSeed: currentUserSeed,
       createdAt: new Date().toISOString(), readBy: [], isDeleted: false,
     }
     setMessages((prev) => [...prev, optimistic])
@@ -88,7 +90,7 @@ export default function CommunityDetail({ community, onBack }: Props) {
     try {
       const data = await conversationsApi.sendMessage(community.conversationId, {
         content, senderName: currentUserName,
-        senderSeed: currentUserName, type: "text",
+        senderSeed: currentUserSeed, type: "text",
       })
       if (data.message) {
         setMessages((prev) => prev.map((m) => m._id === tempId ? { ...m, _id: data.message._id } : m))

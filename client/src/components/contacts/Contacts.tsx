@@ -290,7 +290,7 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
         </div>
         <div className="flex items-center gap-2 mt-5 pt-4 border-t border-light-gray">
           <Button fullWidth variant="secondary" onClick={() => setShowAdd(false)}>Cancel</Button>
-          <Button fullWidth onClick={addContact}>Add Contact</Button>
+          <Button fullWidth onClick={addContact}>{editContact ? "Update Contact" : "Add Contact"}</Button>
         </div>
       </Modal>
 
@@ -378,6 +378,12 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
 
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 px-8 py-6 space-y-5 overflow-y-auto">
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <LoaderIcon size="24" className="animate-spin text-dark-purple/30" />
+            </div>
+          ) : (
+          <>
           <div className="flex items-center gap-3 text-xs">
             <span className="font-semibold text-dark-purple/50">{contacts.length} total</span>
             <span className="w-1 h-1 rounded-full bg-green" />
@@ -424,6 +430,8 @@ export default function Contacts({ onChat }: { onChat: () => void }) {
               </div>
             )}
           </div>
+        </>
+        )}
         </div>
 
         {selectedContact && (
@@ -475,7 +483,7 @@ function ContactDetail({ contact, onClose, onChat, onEdit, onDelete }: { contact
       </div>
       <div className="flex-1 overflow-y-auto px-5 py-6">
         <div className="flex flex-col items-center mb-6">
-          <Avatar seed={contact.seed} size="xl" status={contact.online ? "online" : undefined} />
+          <Avatar seed={contact.seed} imageUrl={contact.avatarUrl} size="xl" status={contact.online ? "online" : undefined} />
           <h2 className="text-lg font-bold text-dark-purple mt-3">{contact.name}</h2>
           <div className="flex items-center gap-2 mt-1">
             <Badge variant="info" size="sm">{contact.role}</Badge>
@@ -536,7 +544,7 @@ function ContactDetail({ contact, onClose, onChat, onEdit, onDelete }: { contact
   )
 }
 
-function ContactRow({ contact, onSelect, onToggleFavorite, onChat, selected, sharedGroups }: { contact: Contact; onSelect: (c: Contact) => void; onToggleFavorite: (name: string) => void; onChat: () => void; selected: boolean; sharedGroups: string[] }) {
+function ContactRow({ contact, onSelect, onToggleFavorite, onChat, selected, sharedGroups }: { contact: Contact; onSelect: (c: Contact) => void; onToggleFavorite: (c: Contact) => void; onChat: () => void; selected: boolean; sharedGroups: string[] }) {
   return (
     <div onClick={() => onSelect(contact)} className={`flex items-center gap-3 px-5 py-4 border-b border-light-gray last:border-0 transition-colors group cursor-pointer ${selected ? "bg-rose/20" : "hover:bg-light-gray/50"}`}>
       <div className="relative shrink-0">
@@ -576,7 +584,7 @@ function ContactRow({ contact, onSelect, onToggleFavorite, onChat, selected, sha
         </div>
       </div>
       <div className="flex items-center gap-1 shrink-0">
-        <button onClick={onChat} className="p-2 rounded-lg hover:bg-light-gray transition-colors" aria-label="Chat with {contact.name}">
+        <button onClick={onChat} className="p-2 rounded-lg hover:bg-light-gray transition-colors" aria-label={`Chat with ${contact.name}`}>
           <MessageCircle size={18} className="text-dark-purple/60" />
         </button>
         <button onClick={() => onToggleFavorite(contact)} className="p-2 rounded-lg hover:bg-light-gray transition-colors" aria-label={contact.favorite ? "Remove from favourites" : "Add to favourites"}>

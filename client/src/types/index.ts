@@ -1,5 +1,5 @@
 export type { Subtask, Comment, Task } from "./task"
-export type { Contact } from "./contact"
+export type { Contact, UserSearchResult } from "./contact"
 export type { CalendarEvent } from "./calendar"
 export type { FileItem } from "./file"
 export type { SettingsCategory, CategoryConfig } from "./settings"

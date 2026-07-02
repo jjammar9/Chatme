@@ -345,7 +345,7 @@ export default function Dashboard({ onViewProfile }: { onViewProfile?: (id: stri
           <div className="flex items-center gap-4">
             <div>
               <p className="text-xs font-semibold text-dark-purple/50 uppercase tracking-wider">{now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</p>
-              <h1 className="text-2xl font-bold text-dark-purple mt-1">{greeting}, {userName} 👋</h1>
+              <h1 className="text-2xl font-bold text-dark-purple mt-1">{greeting}, {userName}</h1>
             </div>
             <div className="flex items-center gap-2 bg-light-gray rounded-xl px-3.5 py-2 self-end">
               <Clock size={14} className="text-dark-purple/40" />
